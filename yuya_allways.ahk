@@ -16,6 +16,8 @@ A_MaxHotkeysPerInterval := 200
 SendMode "Input"
 SetWorkingDir(A_ScriptDir)
 
+vk1D::Send("{vk1D}")
+
 
 
 
@@ -40,23 +42,33 @@ SetWorkingDir(A_ScriptDir)
 ;;
 ;; 無変換関連
 ;;;;
-
-#HotIf GetKeyState("vk1D", "P")
-LButton:: Click 2
-vk1C::    Send("{vk1C}")
-*Up::     Send("{Blind}{Up 5}")
-*Down::   Send("{Blind}{Down 5}")
-*Right::  Send("{Blind}{Right 5}")
-*Left::   Send("{Blind}{Left 5}")
-Enter:: {
+vk1D & LButton:: Click 2
+vk1D & vk1C::    Send("{vk1C}")
+vk1D & Up::      Send("{Blind}{Up 5}")
+vk1D & Down::    Send("{Blind}{Down 5}")
+vk1D & Right::   Send("{Blind}{Right 5}")
+vk1D & Left::    Send("{Blind}{Left 5}")
+vk1D & Enter:: {
     if GetKeyState("Ctrl", "P")
         Send("{Up}{End}{Enter}")
     else
         Send("{End}{Enter}")
 }
+
+;;行削除
+vk1D & BS:: Send("{Home}+{End}+{Right}{BS}")
+
 ;;実行しているスクリプトのReload
+#HotIf GetKeyState("vk1D", "P")
 +^!r:: Reload
 #HotIf
+
+~Esc:: {
+    ; 前回発動したホットキーが「~Esc」で、かつ前回からの経過時間が300ミリ秒未満なら
+    if (A_PriorHotkey == "~Esc" && A_TimeSincePriorHotkey < 300) {
+        Send("{vk1D}")  ; 無変換キーを送信
+    }
+}
 
 
 
@@ -65,40 +77,46 @@ Enter:: {
 ;;
 ;; 大西配列モード
 ;;;;
-
 global toggle := false
 imgGui := Gui("+AlwaysOnTop -Caption +ToolWindow")
 imgGui.MarginX := 0
 imgGui.MarginY := 0
 imgGui.Add("Picture", "w640 h-1", "カンペ.png")
 
-; 無変換 + Spaceでリマッピングの有効/無効を切り替え
-#HotIf GetKeyState("vk1D", "P")
-Space:: {
+; ① 現在の状態を反転（トグル）させる関数
+ToggleOhnishiMode() {
     global toggle
-    toggle := !toggle
+    SetOhnishiMode(!toggle) ; 現在のトグル状態の「逆」をセットする
+}
+; ② ON/OFFを明示的に指定して適用する関数
+SetOhnishiMode(state) {
+    global toggle
+    toggle := state
     imgWidth := 640
     imgHeight := 221
     if (toggle == true) {
+        ; --- 大西配列 ON ---
         Send("{vk1C}")
-        xPos := A_ScreenWidth - imgWidth *1.5 - 50
-        yPos := A_ScreenHeight - imgHeight *1.5 - 50
+        xPos := A_ScreenWidth - (imgWidth * 1.5) - 50
+        yPos := A_ScreenHeight - (imgHeight * 1.5) - 50
         imgGui.Show("NoActivate x" xPos " y" yPos)
+        WinSetAlwaysOnTop(1, imgGui.Hwnd)
     } else {
+        ; --- 大西配列 OFF ---
         Send("{vk1D}")
         imgGui.Hide()
     }
 }
-#HotIf
 
-#HotIf toggle && GetKeyState("vk1D", "P")
-i::Up
-j::Left
-k::Down
-l::Right
-#HotIf
+; 無変換 + Spaceでリマッピングの有効/無効を切り替え
+vk1D & Space:: ToggleOhnishiMode()
 
 #HotIf toggle
+vk1D & i::Up
+vk1D & j::Left
+vk1D & k::Down
+vk1D & l::Right
+
 w::l
 e::u
 r::,
@@ -127,16 +145,13 @@ Left::j
 Down::b
 #HotIf
 
+^Enter:: {
+    Send("^{Enter}")
+    ; Send("{vk1D}")
+    SetOhnishiMode(false)
+}
 
 
-
-
-;;
-;; Adobe全般で共通の設定
-;;;;
-#HotIf WinActive( ai_exe ) || WinActive( ps_exe ) || WinActive( au_exe ) || WinActive( ae_exe ) || WinActive( pr_exe )
-^Enter:: Send("^{Enter}{vk1D}")
-#HotIf
 
 
 
@@ -153,6 +168,8 @@ CheckIllustrator() {
         }
     }
 }
+
+
 
 
 
@@ -195,19 +212,15 @@ CheckIllustrator() {
 
 ; グラフィックステキストを編集
 +^!Enter:: Send("^![^!{Enter}")
-#HotIf
-
-;; 無変換
-#HotIf WinActive( pr_exe ) && GetKeyState( "vk1D", "P" )
 
 ; ターゲットの移動
-[:: {
+vk1D & [:: {
     if GetKeyState("Ctrl", "P") ; オーディオターゲット
         Send("!{PgDn}")
     else ; ビデオターゲット
         Send("^!{PgDn}")
 }
-]:: {
+vk1D & ]:: {
     if GetKeyState("Ctrl", "P")
         Send("!{PgUp}")
     else
@@ -215,24 +228,25 @@ CheckIllustrator() {
 }
 
 ; 拡大・縮小
--:: Send("{- 3}")
-::: Send("{: 3}")
+; vk1D & -:: Send("{- 3}")
+; vk1D & ::: Send("{: 3}")
 
 ; キャプションセグメントの分割
-+s:: {
-    Send("+{Down}+{End}^x")
-    Sleep 500
-    Send("{Esc}")
-    Sleep 250
-    Send("!/")
-    Sleep 500
-    Send("{Down}")
-    Sleep 250
-    Send("{Enter}")
-    Sleep 500
-    Send("^v")
-    Sleep 500
-    Send("{Esc}")
+vk1D & s:: {
+    if GetKeyState("Shift", "P")
+        Send("+{Down}+{End}^x")
+        Sleep 500
+        Send("{Esc}")
+        Sleep 250
+        Send("!/")
+        Sleep 500
+        Send("{Down}")
+        Sleep 250
+        Send("{Enter}")
+        Sleep 500
+        Send("^v")
+        Sleep 500
+        Send("{Esc}")
 }
 #HotIf
 
