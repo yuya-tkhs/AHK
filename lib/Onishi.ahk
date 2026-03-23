@@ -2,48 +2,42 @@
 ;; 大西配列モード
 ;;;;
 global onishi := false
-imgGui := Gui("+AlwaysOnTop -Caption +ToolWindow")
-imgGui.MarginX := 0
-imgGui.MarginY := 0
-imgGui.Add("Picture", "w640 h-1", "カンペ.png")
+onishiGui := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale")
+onishiGui.MarginX := 0
+onishiGui.MarginY := 0
+onishiTargetWidth := Integer(A_ScreenWidth * 0.25)
+onishiGui.Add("Picture", "w" . onishiTargetWidth . " h-1", "Onishi.png")
+onishiGui.Show("Hide")
 
-; ① 現在の状態を反転（トグル）させる関数
-onishiOhnishiMode() {
+toggleOnishiMode() {
     global onishi
-    SetOhnishiMode(!onishi) ; 現在のトグル状態の「逆」をセットする
+    SetOnishiMode(!onishi) ; 現在のトグル状態の「逆」をセットする
 }
-; ② ON/OFFを明示的に指定して適用する関数
-SetOhnishiMode(state) {
+SetOnishiMode(state) {
     global onishi
     onishi := state
-    imgWidth := 640
-    imgHeight := 221
     if (onishi == true) {
-        ; --- 大西配列 ON ---
         Send("{vk1C}")
-        xPos := A_ScreenWidth - (imgWidth * 1.5) - 50
-        yPos := A_ScreenHeight - (imgHeight * 1.5) - 50
-        imgGui.Show("NoActivate x" xPos " y" yPos)
-        WinSetAlwaysOnTop(1, imgGui.Hwnd)
+        onishiGui.GetPos(,, &guiW, &guiH)
+        xPos := A_ScreenWidth - guiW - 25
+        yPos := A_ScreenHeight - guiH - 25
+        onishiGui.Show("NoActivate x" xPos " y" yPos)
     } else {
-        ; --- 大西配列 OFF ---
         Send("{vk1D}")
-        imgGui.Hide()
+        onishiGui.Hide()
     }
 }
 
-; 無変換 + Spaceでリマッピングの有効/無効を切り替え
-vk1D & Space:: onishiOhnishiMode()
-
 #HotIf onishi
 vk1D & i::  Send("{Blind}{Up}")
-vk1D & j::  Send("{Blind}{Down}")
-vk1D & k::  Send("{Blind}{Right}")
-vk1D & l::  Send("{Blind}{Left}")
+vk1D & k::  Send("{Blind}{Down}")
+vk1D & j::  Send("{Blind}{Left}")
+vk1D & l::  Send("{Blind}{Right}")
+
 vk1D & o::  Send("{Blind}{Up 5}")
 vk1D & -::  Send("{Blind}{Down 5}")
-vk1D & Up:: Send("{Blind}{Right 5}")
 vk1D & h::  Send("{Blind}{Left 5}")
+vk1D & Up:: Send("{Blind}{Right 5}")
 
 w::l
 e::u
@@ -75,6 +69,5 @@ Down::b
 
 ^Enter:: {
     Send("^{Enter}")
-    ; Send("{vk1D}")
-    SetOhnishiMode(false)
+    SetOnishiMode(false)
 }

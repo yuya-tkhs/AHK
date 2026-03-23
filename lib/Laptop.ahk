@@ -1,8 +1,4 @@
-#HotIf InStr(A_ComputerName, "Laptop") || InStr(A_ComputerName, "LAPTOP")
-
-j & k:: Send("{vk1C}")
-d & f:: Send("{vk1D}")
-Left & Down:: Send("{Home}")
-Down & Right:: Send("{End}")
-
-#HotIf
+#HotIf InStr(A_ComputerName, "Laptop")
+CapsLock::Ctrl
++CapsLock::CapsLock
+#HotIf ; 条件リセット (これ以降は全PCで動く設定になります)

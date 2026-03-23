@@ -2,18 +2,6 @@
 ;; 中央クリックでスクロール
 ;; 参考： https://yuruaki.blog.fc2.com/blog-entry-52.html
 ;;;;
-
-#HotIf GetKeyState("MButton", "P")
-a:: Send("^a")
-s:: {
-    Send("^s")
-    my_tooltip_function("上書き保存", 600)
-}
-x:: Send("^x")
-c:: Send("^c")
-v:: Send("^v")
-#HotIf
-
 #HotIf !GetKeyState("vk1D", "P") && !WinActive( ai_exe ) && !WinActive( ps_exe ) && !WinActive( au_exe ) && !WinActive( ae_exe ) && !WinActive( bl_exe ) && !WinActive( pureref_exe )
 *MButton:: {
     ; 初期化
