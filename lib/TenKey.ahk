@@ -28,27 +28,27 @@ SetTenkeyMode(state) {
 }
 
 #HotIf Tenkey
-Tab::NumLock
-q::NumpadDiv
-w::Numpad7
-e::Numpad8
-r::Numpad9
-t::NumpadSub
+; 修飾キーと組み合わせると元のキーとして動く（単押しは2、Alt+CはAlt+C）
+q:: Send("{NumpadDiv}")
+w:: Send("{Numpad7}")
+e:: Send("{Numpad8}")
+r:: Send("{Numpad9}")
+t:: Send("{NumpadSub}")
 
-LCtrl::Tab
-a::NumpadMult
-s::Numpad4
-d::Numpad5
-f::Numpad6
-g::NumpadAdd
+a:: Send("{NumpadMult}")
+s:: Send("{Numpad4}")
+d:: Send("{Numpad5}")
+f:: Send("{Numpad6}")
+g:: Send("{NumpadAdd}")
 
-LShift::BS
-z::Numpad0
-x::Numpad1
-c::Numpad2
-v::Numpad3
-b::,
+z:: Send("{Numpad0}")
+x:: Send("{Numpad1}")
+c:: Send("{Numpad2}")
+v:: Send("{Numpad3}")
+b:: Send("{NumpadDot}")
 
-LAlt::NumpadDot
-Space::NumpadEnter
+[:: Send("{NumLock}")
+
+; 修飾キーと組み合わせてもNumpadEnterとして動く
+Space:: NumpadEnter
 #HotIf

@@ -2,7 +2,7 @@
 ;; 中央クリックでスクロール
 ;; 参考： https://yuruaki.blog.fc2.com/blog-entry-52.html
 ;;;;
-#HotIf !GetKeyState("vk1D", "P") && !WinActive( ai_exe ) && !WinActive( ps_exe ) && !WinActive( au_exe ) && !WinActive( ae_exe ) && !WinActive( bl_exe ) && !WinActive( pureref_exe )
+#HotIf !GetKeyState("vk1D", "P") && !WinActive( exe_ai ) && !WinActive( exe_ps ) && !WinActive( exe_au ) && !WinActive( exe_ae ) && !WinActive( exe_bl ) && !WinActive( exe_pureref )
 *MButton:: {
     ; 初期化
     Send "+^{MButton UP}"

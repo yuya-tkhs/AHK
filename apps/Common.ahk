@@ -1,17 +1,33 @@
 vk1D & Space:: {
-    ToolTip("【2ストローク待機中】`nC: コピー`nV: ペースト`n(2秒以内に押してください)")
-    
+    MyTooltip("
+    (
+    2ストローク待機中（5秒）
+    - - - - - - - - - - - - - - - -
+    Space: 大西配列モード
+    d: テンキーモード
+    - - - - - - - - - - - - - - - -
+    矢印: Window操作
+    1, 2: PCの切り替え
+    e: Explorer
+    s: Screen Short
+    c: Color Picker
+    v: Clipboard
+    x: Windows Menu
+    r: Reload
+    )", 5000)    
     ih := InputHook("L1 T2") ; 次の1文字を待機 (L1: 1文字入力で終了, T2: 2秒でタイムアウト)
     ih.KeyOpt("{Space}{Escape}{vk1D}{Numpad5}{NumpadEnter}", "E")
     ih.Start()
     ih.Wait()
-    ToolTip() ; ツールチップを消す
-    
+    MyTooltip()
     if (ih.EndReason = "Timeout") {
         return 
     }
-
     capturedKey := (ih.EndReason = "EndKey") ? ih.EndKey : ih.Input
+    ; 物理キーから指が離れるまで待機（Sendと物理キーの衝突を防ぐ）
+    if (capturedKey != "") {
+        KeyWait(StrLower(capturedKey))
+    }
     switch capturedKey {
         case "Space":      toggleOnishiMode()  ; 大西配列モードに入る
         case "Escape":     return              ; Escが押されたら安全にキャンセル
@@ -41,7 +57,7 @@ vk1D & Space:: {
         case "x":          Send("#x")
         case "c":          Send("#+c")
 
-        default:           my_tooltip_function("無効なキーです", 500)
+        default:           MyTooltip("無効なキーです", 500)
     }
 }
 
@@ -69,14 +85,14 @@ vk1D & BS:: Send("{Home}+{End}+{Right}{BS}") ;;行削除
     Send("{vk1D up}")
     SetOnishiMode(false)
     SetTenkeyMode(false)
-    my_tooltip_function("🔄 キー状態をリセットしました", 500)
+    MyTooltip("🔄 キー状態をリセットしました", 1500)
 }
 
 OnClipboardChange(OnClipChanged)
 OnClipChanged(DataType) { ; DataTypeには 0(空), 1(テキスト), 2(画像などのファイル) が入る
-    my_tooltip_function("コピー", 600)
+    MyTooltip("コピー", 1500)
 }
 
 ~^s:: {
-    my_tooltip_function("上書き保存", 600)
+    MyTooltip("上書き保存", 1500)
 }
