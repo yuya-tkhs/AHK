@@ -30,6 +30,7 @@
     }
 }
 #HotIf
+
 ScrollAccXY( ox, oy, n, s, k1, k2, &spd ) {
     d := n - s
     c := 0

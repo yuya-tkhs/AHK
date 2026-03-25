@@ -8,7 +8,8 @@
     - - - - - - - - - - - - - - - -
     Space: Rename
     r: PowerRename
-    g: GDriveの設定変更
+    t: テキストファイルの作成
+    g: Googleドライブの設定変更
     - - - - - - - - - - - - - - - -
     1: 動画フォルダの作成
     2: Original, Proxy
@@ -30,6 +31,7 @@
         case "Escape": return
         case "Space":  Send("{F2}")
         case "r":      Send("+{F10}p")
+        case "t":      CreateTextFile()
         case "g":      GDriveOnline()
         case "1":      CreateFolders(["01_Master","02_Assets","03_Works","04_Projects","05_Render"])
         case "2":      CreateFolders(["Original","Proxy"])
@@ -41,6 +43,12 @@ GDriveOnline() {
     Send("+{F10}")
     Sleep(250)
     Send("{g 2}{Up 2}{Right}")
+}
+
+CreateTextFile() {
+    OpenBgMenu("w{Up 3}")
+    Sleep(250)
+    Send("{Enter}")
 }
 
 GetActiveExplorerTab() {

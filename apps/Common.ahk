@@ -1,13 +1,26 @@
+F23:: {
+    if (onishi) {
+        toggleOnishiAndTenkey()
+    } else {
+        toggleTenkeyMode()
+    }
+}
+
+F24:: {
+    if (tenkey) {
+        toggleOnishiAndTenkey()
+    } else {
+        toggleOnishiMode()
+    }
+}
+
 vk1D & Space:: {
     MyTooltip("
     (
     2ストローク待機中（5秒）
     - - - - - - - - - - - - - - - -
-    Space: 大西配列モード
-    d: テンキーモード
-    - - - - - - - - - - - - - - - -
+    Space: Winキー
     矢印: Window操作
-    1, 2: PCの切り替え
     e: Explorer
     s: Screen Short
     c: Color Picker
@@ -29,34 +42,18 @@ vk1D & Space:: {
         KeyWait(StrLower(capturedKey))
     }
     switch capturedKey {
-        case "Space":      toggleOnishiMode()  ; 大西配列モードに入る
         case "Escape":     return              ; Escが押されたら安全にキャンセル
+        case "Space":      Send("{LWin}")
         case "Up":         Send("#{Up}")
         case "Down":       Send("#{Down}")
         case "Right":      Send("#{Right}")
         case "Left":       Send("#{Left}")
-
-        case "Numpad5":    SetTenkeyMode(false)
-        case "NumpadEnter":toggleOnishiAndTenkey()
-
-        case "1":          Send("^!{F1}")
-        case "2":          Send("^!{F2}")
-
         case "e":          Send("#e")
-        case "r":          Reload               ; 実行しているスクリプトのReload
-
-        case "a":          
-            if (onishi) { 
-                toggleOnishiAndTenkey() 
-            }
+        case "r":          Reload              ; 実行しているスクリプトのReload
         case "s":          Send("#+s")
-        case "d":          SetTenkeyMode(true)
-        case "f":          Send("{LWin}")
-
         case "v":          Send("#v")
         case "x":          Send("#x")
         case "c":          Send("#+c")
-
         default:           MyTooltip("無効なキーです", 500)
     }
 }
