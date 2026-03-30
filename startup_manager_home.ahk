@@ -31,27 +31,27 @@ Loop MaxWaitSeconds
     {
         ; ドライブ認識直後は不安定な場合があるため、念のため3秒待つ
         Sleep 3000
-        
+
         ; 起動成功したアプリ名を記録する変数
         StartedList := ""
-        
+
         ; --- 2. アプリ起動ループ ---
         for appPath in TargetApps
         {
             if FileExist(appPath)
             {
                 Run appPath
-                
+
                 ; パスからファイル名（例: Eagle.exe）だけを取り出して記録
                 SplitPath appPath, &ExeName
                 StartedList .= ExeName . "`n"
-                
+
                 ; 次のアプリ起動まで少し待つ（負荷分散）
                 Sleep AppInterval
             }
             ; ファイルが見つからない場合はスキップ（必要ならここにMsgBoxを追加）
         }
-        
+
         ; --- 3. 完了通知 ---
         if (StartedList != "")
         {
@@ -62,10 +62,10 @@ Loop MaxWaitSeconds
         {
             TrayTip "Wドライブは確認できましたが、アプリが見つかりませんでした。", "エラー", "Icon!"
         }
-        
+
         ExitApp
     }
-    
+
     ; まだ見つからない場合は1秒待って再チェック
     Sleep 1000
 }

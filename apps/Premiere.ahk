@@ -13,7 +13,7 @@
     f: エフェクトの検索
     d: 空のトラックを削除
     h: 再生ヘッド位置を自動選択
-    - - - ヘッダーにマウスオン - - - 
+    - - - ヘッダーにマウスオン - - -
     a: トラックの追加
     e: トラック名の変更
     )", 5000)
@@ -23,7 +23,7 @@
     ih.Wait()
     MyTooltip()
     if (ih.EndReason = "Timeout") {
-        return 
+        return
     }
     capturedKey := (ih.EndReason = "EndKey") ? ih.EndKey : ih.Input
     ; 物理キーから指が離れるまで待機（Sendと物理キーの衝突を防ぐ）
@@ -33,10 +33,10 @@
     switch capturedKey {
         case "Escape": return
         case "Space":  Send("{vk1D}+7+f{Backspace}{vk1C}")
-        case "p":      Send("+1+5{Tab 4}") 
-        case "s":      Send("+1+5{Tab 7}")  
+        case "p":      Send("+1+5{Tab 4}")
+        case "s":      Send("+1+5{Tab 7}")
         case "r":      Send("+1+5{Tab 10}")
-        case "d": 
+        case "d":
             MenuSelect(exe_pr,, "シーケンス(S)", "トラックの削除(K)...")
             Sleep(250)
             Send("{Tab 2}{Space}{Tab 2}{Space}{Enter}")

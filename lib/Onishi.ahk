@@ -22,6 +22,7 @@ SetOnishiMode(state) {
         xPos := A_ScreenWidth - guiW - 25
         yPos := A_ScreenHeight - guiH - 25
         onishiGui.Show("NoActivate x" xPos " y" yPos)
+        WinMoveTop("ahk_id " . onishiGui.Hwnd)
     } else {
         Send("{vk1D}")
         onishiGui.Hide()
@@ -66,8 +67,3 @@ m::d
 Left::j
 Down::b
 #HotIf
-
-^Enter:: {
-    Send("^{Enter}")
-    SetOnishiMode(false)
-}

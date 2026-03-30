@@ -9,6 +9,7 @@
     Space: Rename
     r: PowerRename
     t: テキストファイルの作成
+    c: 開いているフォルダのパスを取得
     g: Googleドライブの設定変更
     - - - - - - - - - - - - - - - -
     1: 動画フォルダの作成
@@ -20,7 +21,7 @@
     ih.Wait()
     MyTooltip()
     if (ih.EndReason = "Timeout") {
-        return 
+        return
     }
     capturedKey := (ih.EndReason = "EndKey") ? ih.EndKey : ih.Input
     ; 物理キーから指が離れるまで待機（Sendと物理キーの衝突を防ぐ）
@@ -32,12 +33,15 @@
         case "Space":  Send("{F2}")
         case "r":      Send("+{F10}p")
         case "t":      CreateTextFile()
+        case "c":      RunGetExplorerPath()
         case "g":      GDriveOnline()
         case "1":      CreateFolders(["01_Master","02_Assets","03_Works","04_Projects","05_Render"])
         case "2":      CreateFolders(["Original","Proxy"])
         default:       MyTooltip("無効なキーです", 500)
     }
 }
+
+
 
 GDriveOnline() {
     Send("+{F10}")
@@ -66,10 +70,10 @@ GetActiveExplorerTab() {
             if (activeTab) {
                 static IID_IShellBrowser := "{000214E2-0000-0000-C000-000000000046}"
                 shellBrowser := ComObjQuery(window, IID_IShellBrowser, IID_IShellBrowser)
-                ComCall(3, shellBrowser, "uint*", &thisTab := 0)   
+                ComCall(3, shellBrowser, "uint*", &thisTab := 0)
                 ; 見えているタブのIDと一致しなければスキップ（裏のタブを無視）
                 if (thisTab != activeTab) {
-                    continue 
+                    continue
                 }
             }
             ; 一致したタブのオブジェクトを返す
@@ -77,6 +81,10 @@ GetActiveExplorerTab() {
         }
     }
     return ""
+}
+
+RunGetExplorerPath() {
+    A_Clipboard := GetCurrentExplorerPath()
 }
 
 GetCurrentExplorerPath() {
@@ -93,14 +101,14 @@ OpenBgMenu( keysToSend := "" ) {
         tab := GetActiveExplorerTab()
         if (tab != "") {
             for item in tab.Document.SelectedItems {
-                tab.Document.SelectItem(item, 0) 
+                tab.Document.SelectItem(item, 0)
             }
         }
     }
     Sleep(50)
     ; 2. 背景の右クリックメニューを出す
-    Send("+{F10}") 
-    Sleep(250) 
+    Send("+{F10}")
+    Sleep(250)
     ; 3. 引数で指定されたキーがあれば送信する
     if (keysToSend != "") {
         Send(keysToSend)
@@ -117,7 +125,7 @@ CreateFolders(folderNames) {
     ; 配列の中身を1つずつ取り出してループ処理
     for index, folderName in folderNames {
         targetPath := basePath . folderName ; 作成先のフルパスを作る
-        
+
         ; フォルダがまだ存在していない場合のみ作成を実行
         if !DirExist(targetPath) {
             try {

@@ -67,7 +67,7 @@ MyTooltip(text := "", duration := 300) {
     ; --- 終了処理 ---
     ClearTooltip() {
         SetTimer(followTimer, 0)
-        ToolTip() 
+        ToolTip()
         followTimer := ""
         clearTimer := ""
         ttHwnd := 0
