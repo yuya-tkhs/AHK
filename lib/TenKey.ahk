@@ -18,6 +18,7 @@ SetTenkeyMode(state) {
     global Tenkey
     Tenkey := state
     if (Tenkey == true) {
+        Send("{vk1D}")
         tenGui.GetPos(,, &guiW, &guiH)
         xPos := A_ScreenWidth - guiW - 25
         yPos := A_ScreenHeight - guiH - 25

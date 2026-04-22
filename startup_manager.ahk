@@ -9,8 +9,8 @@ TargetDrive := "W:\"
 
 ; ★起動したいアプリのリスト（配列）
 TargetApps := [
-    "C:\Program Files\FontBase\FontBase.exe",
-    "C:\Program Files\Eagle\Eagle.exe"
+    "C:\Program Files\Eagle\Eagle.exe",
+    "W:\マイドライブ\Programming\carnac\Setup.exe"
 ]
 
 ; アプリごとの起動間隔（ミリ秒）
