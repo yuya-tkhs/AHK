@@ -1,7 +1,13 @@
+; AdobeCommon.ahkのOnCtrlEnterPost()から呼ばれる
+OnCtrlEnterPremiere() {
+    Send("{vk1D}")
+    Send("^{Tab}")
+}
+
 #HotIf WinActive( exe_pr )
 
 ; グラフィックステキストを編集
-+^!vk1C:: Send("{vk1C}^![^!{Enter}")
+^vk1C:: Send("{vk1C}^![^!{Enter}")
 
 ; 2ストローク
 ^Space:: {
@@ -37,10 +43,15 @@
         case "s":      Send("+1+5{Tab 7}")
         case "r":      Send("+1+5{Tab 10}")
         case "d":
-            MenuSelect(exe_pr,, "シーケンス(S)", "トラックの削除(K)...")
+            Send("!s")  ; Alt+S でシーケンスメニューを開く
+            Sleep(200)
+            Send("k")   ; K でトラックの削除を選択
             Sleep(250)
             Send("{Tab 2}{Space}{Tab 2}{Space}{Enter}")
-        case "h":      MenuSelect(exe_pr,, "シーケンス(S)", "再生ヘッド位置を自動選択(P)")
+        case "h":
+            Send("!s")  ; Alt+S でシーケンスメニューを開く
+            Sleep(200)
+            Send("p")   ; P で再生ヘッド位置を自動選択
         case "e":      Send("{Click Right}{Down}{Enter}")
         case "a":      Send("{Click Right}{Down 2}{Enter}")
         default:       MyTooltip("無効なキーです", 500)
