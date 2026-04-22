@@ -1,0 +1,106 @@
+; DPI非依存の相対マウス移動（モニター跨ぎ対応）
+_RawMouseMove(dx, dy) {
+    static cbSize := 40  ; 64bit: sizeof(INPUT)
+    INPUT := Buffer(cbSize, 0)
+    NumPut("UInt", 0,    INPUT,  0)   ; type = INPUT_MOUSE
+    NumPut("Int",  dx,   INPUT,  8)   ; MOUSEINPUT.dx
+    NumPut("Int",  dy,   INPUT, 12)   ; MOUSEINPUT.dy
+    NumPut("UInt", 0x01, INPUT, 20)   ; dwFlags = MOUSEEVENTF_MOVE
+    DllCall("SendInput", "UInt", 1, "Ptr", INPUT, "Int", cbSize)
+}
+
+global mouseMode := false
+global _mm_left := false, _mm_right := false, _mm_up := false, _mm_down := false
+global _mm_steps := 0
+
+_MouseMoveStep() {
+    global _mm_left, _mm_right, _mm_up, _mm_down, _mm_steps
+    dx := (_mm_right ? 1 : 0) - (_mm_left ? 1 : 0)
+    dy := (_mm_down  ? 1 : 0) - (_mm_up   ? 1 : 0)
+    if (dx = 0 && dy = 0) {
+        _mm_steps := 0
+        return
+    }
+    _mm_steps += 1
+    if GetKeyState("LAlt", "P")
+        speed := 2
+    else
+        speed := Min(10 + _mm_steps * 1.6, 60)
+    factor := (dx != 0 && dy != 0) ? 0.707 : 1  ; 斜め移動の速度を正規化
+    _RawMouseMove(Round(dx * speed * factor), Round(dy * speed * factor))
+}
+
+_SetMM(key, val) {
+    global _mm_left, _mm_right, _mm_up, _mm_down, _mm_steps
+    switch key {
+        case "left":
+            if (val && !_mm_left)   ; キーリピートでは既にtrueなのでリセットしない
+                _mm_steps := 0
+            _mm_left  := val
+        case "right":
+            if (val && !_mm_right)
+                _mm_steps := 0
+            _mm_right := val
+        case "up":
+            if (val && !_mm_up)
+                _mm_steps := 0
+            _mm_up    := val
+        case "down":
+            if (val && !_mm_down)
+                _mm_steps := 0
+            _mm_down  := val
+    }
+}
+
+EnterMouseMode() {
+    global mouseMode
+    mouseMode := true
+    MyTooltip("
+    (
+    マウスモード
+    - - - - - - - - - - - - - -
+    q w e: Click 2 3 1
+    a d: Wheel ↓ ↑
+    z x s c: ← ↓ ↑ →
+    LAlt: Slow
+    - - - - - - - - - - - - - -
+    Esc: 終了
+    )", 99999)
+    SetTimer(_MouseMoveStep, 16)
+}
+
+ExitMouseMode() {
+    global mouseMode, _mm_left, _mm_right, _mm_up, _mm_down, _mm_steps
+    mouseMode := false
+    _mm_left  := false
+    _mm_right := false
+    _mm_up    := false
+    _mm_down  := false
+    _mm_steps := 0
+    SetTimer(_MouseMoveStep, 0)
+    MyTooltip()
+}
+
+#HotIf mouseMode
+
+z::    _SetMM("left",  true)
+z up:: _SetMM("left",  false)
+x::    _SetMM("down",  true)
+x up:: _SetMM("down",  false)
+s::    _SetMM("up",    true)
+s up:: _SetMM("up",    false)
+c::    _SetMM("right", true)
+c up:: _SetMM("right", false)
+
+LAlt:: return  ; Spaceを抑制しつつGetKeyStateで低速モード判定に使う
+
+a:: Send("{WheelDown}")
+d:: Send("{WheelUp}")
+
+q:: Click("Left")
+w:: Click("Middle")
+e:: Click("Right")
+
+Esc:: ExitMouseMode()
+
+#HotIf

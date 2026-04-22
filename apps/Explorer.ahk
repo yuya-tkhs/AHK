@@ -11,6 +11,7 @@
     t: テキストファイルの作成
     c: 開いているフォルダのパスを取得
     g: Googleドライブの設定変更
+    d: Downloadsの最新ファイルを移動
     - - - - - - - - - - - - - - - -
     1: 動画フォルダの作成
     2: Original, Proxy
@@ -35,6 +36,7 @@
         case "t":      CreateTextFile()
         case "c":      RunGetExplorerPath()
         case "g":      GDriveOnline()
+        case "d":      MoveFileHere()
         case "1":      CreateFolders(["01_Master","02_Assets","03_Works","04_Projects","05_Render"])
         case "2":      CreateFolders(["Original","Proxy"])
         default:       MyTooltip("無効なキーです", 500)
@@ -42,6 +44,74 @@
 }
 
 
+
+MoveFileHere() {
+    sourceDir := EnvGet("USERPROFILE") . "\Downloads"
+    destDir := GetCurrentExplorerPath()
+
+    if (destDir = "") {
+        MyTooltip("移動先フォルダを取得できませんでした", 2000)
+        return
+    }
+    if (sourceDir = destDir) {
+        MyTooltip("移動元と移動先が同じフォルダです", 2000)
+        return
+    }
+
+    ; Downloadsの最新ファイルを探す
+    newestFile := ""
+    newestTime := ""
+    Loop Files, sourceDir . "\*", "F" {
+        if (newestTime = "" || A_LoopFileTimeModified > newestTime) {
+            newestTime := A_LoopFileTimeModified
+            newestFile := A_LoopFilePath
+        }
+    }
+
+    if (newestFile = "") {
+        MyTooltip("Downloadsにファイルがありません", 2000)
+        return
+    }
+
+    SplitPath(newestFile, &fileName)
+    SplitPath(destDir, &destName, &destParentPath)
+    SplitPath(destParentPath, &destParentName)
+    shortDest := "...\" . destParentName . "\" . destName
+    MyTooltip( Format("
+    (
+    移動
+    - - - - - - - - - - - - - - - -
+    {}
+    {}
+    - - - - - - - - - - - - - - - -
+    Enter/Space: 実行
+    Esc: キャンセル
+    )", fileName, shortDest ), 15000 )
+
+    ih := InputHook("L1 T15")
+    ih.KeyOpt("{Escape}{Enter}{Space}", "E")
+    ih.Start()
+    ih.Wait()
+    MyTooltip()
+
+    if (ih.EndReason = "Timeout" || ih.EndKey = "Escape") {
+        return
+    }
+
+    destPath := destDir . "\" . fileName
+    if (FileExist(destPath)) {
+        if (MsgBox("同名ファイルが存在します。上書きしますか?`n" . destPath, "確認", "YesNo") != "Yes") {
+            return
+        }
+    }
+
+    try {
+        FileMove(newestFile, destPath, true)
+        MyTooltip("移動完了: " . fileName, 2000)
+    } catch as err {
+        MsgBox("ファイルの移動に失敗しました:`n" . err.Message)
+    }
+}
 
 GDriveOnline() {
     Send("+{F10}")
