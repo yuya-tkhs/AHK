@@ -22,7 +22,7 @@ _MouseMoveStep() {
         return
     }
     _mm_steps += 1
-    if GetKeyState("LAlt", "P")
+    if GetKeyState("Space", "P")
         speed := 2
     else
         speed := Min(10 + _mm_steps * 1.6, 60)
@@ -59,12 +59,12 @@ EnterMouseMode() {
     (
     マウスモード
     - - - - - - - - - - - - - -
-    q w e: Click 2 3 1
-    a d: Wheel ↓ ↑
-    z x s c: ← ↓ ↑ →
-    LAlt: Slow
+    w e r: Click 2 3 1
+    s f: Wheel ↓ ↑
+    x c d v: ← ↓ ↑ →
+    Space: Slow
     - - - - - - - - - - - - - -
-    Esc: 終了
+    Esc / F22: 終了
     )", 99999)
     SetTimer(_MouseMoveStep, 16)
 }
@@ -81,26 +81,29 @@ ExitMouseMode() {
     MyTooltip()
 }
 
+F22:: EnterMouseMode()
+
 #HotIf mouseMode
 
-z::    _SetMM("left",  true)
-z up:: _SetMM("left",  false)
-x::    _SetMM("down",  true)
-x up:: _SetMM("down",  false)
-s::    _SetMM("up",    true)
-s up:: _SetMM("up",    false)
-c::    _SetMM("right", true)
-c up:: _SetMM("right", false)
+x::    _SetMM("left",  true)
+x up:: _SetMM("left",  false)
+c::    _SetMM("down",  true)
+c up:: _SetMM("down",  false)
+d::    _SetMM("up",    true)
+d up:: _SetMM("up",    false)
+v::    _SetMM("right", true)
+v up:: _SetMM("right", false)
 
-LAlt:: return  ; Spaceを抑制しつつGetKeyStateで低速モード判定に使う
+Space:: return  ; キー入力を抑制しつつGetKeyStateで低速モード判定に使う
 
-a:: Send("{WheelDown}")
-d:: Send("{WheelUp}")
+s:: Send("{WheelDown}")
+f:: Send("{WheelUp}")
 
-q:: Click("Left")
-w:: Click("Middle")
-e:: Click("Right")
+w:: Click("Left")
+e:: Click("Middle")
+r:: Click("Right")
 
 Esc:: ExitMouseMode()
+F22:: ExitMouseMode()
 
 #HotIf

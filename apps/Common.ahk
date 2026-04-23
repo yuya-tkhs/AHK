@@ -30,7 +30,6 @@ vk1D & Space:: {
     v: Clipboard
     x: Windows Menu
     r: Reload
-    m: Mouse Mode
     )", 5000)
     ih := InputHook("L1 T2") ; 次の1文字を待機 (L1: 1文字入力で終了, T2: 2秒でタイムアウト)
     ih.KeyOpt("{Space}{Escape}{vk1D}{Numpad5}{NumpadEnter}{Up}{Down}{Right}{Left}", "E")
@@ -59,7 +58,6 @@ vk1D & Space:: {
         case "v":          Send("#v")
         case "x":          Send("#x")
         case "c":          Send("#+c")
-        case "m":          EnterMouseMode()
         default:           MyTooltip("無効なキーです", 500)
     }
 }
