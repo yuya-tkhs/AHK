@@ -6,7 +6,7 @@ onishiGui := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale")
 onishiGui.MarginX := 0
 onishiGui.MarginY := 0
 onishiTargetWidth := Integer(A_ScreenWidth * 0.25)
-onishiGui.Add("Picture", "w" . onishiTargetWidth . " h-1", "Onishi.png")
+onishiGui.Add("Picture", "w" . onishiTargetWidth . " h-1", A_ScriptDir "\images\Onishi.png")
 onishiGui.Show("Hide")
 
 toggleOnishiMode() {

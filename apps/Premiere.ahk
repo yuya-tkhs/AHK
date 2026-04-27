@@ -69,6 +69,50 @@ OnCtrlEnterPremiere() {
 +^!q:: Send("+^!q+^{Right}")
 +^!w:: Send("+^!w+^{Left}")
 
+#HotIf WinActive( exe_pr ) && Tenkey
+a & Space:: {
+    imgPath := A_ScriptDir "\images\トラックロック.png"
+    if ImageSearch(&imgX, &imgY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*20 " imgPath)
+        Click imgX, imgY
+    else
+        MyTooltip("トラックロックが見つかりません", 1500)
+}
+q & Space:: {
+    imgPath := A_ScriptDir "\images\トラックリリース.png"
+    if ImageSearch(&imgX, &imgY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*20 " imgPath)
+        Click imgX, imgY
+    else
+        MyTooltip("トラックリリースが見つかりません", 1500)
+}
+
+#HotIf WinActive( exe_pr ) && GetKeyState("LButton", "P") && Tenkey
+z::  Send("^{Numpad0}")
+x::  Send("^{Numpad1}")
+c::  Send("^{Numpad2}")
+v::  Send("^{Numpad3}")
+s::  Send("^{Numpad4}")
+d::  Send("^{Numpad5}")
+f::  Send("^{Numpad6}")
+w::  Send("^{Numpad7}")
+e::  Send("^{Numpad8}")
+r::  Send("^{Numpad9}")
+b::  Send("^{NumpadDot}")
+t::  Send("^{NumpadSub}")
+g::  Send("^{NumpadAdd}")
+!z:: Send("^!{Numpad0}")
+!x:: Send("^!{Numpad1}")
+!c:: Send("^!{Numpad2}")
+!v:: Send("^!{Numpad3}")
+!s:: Send("^!{Numpad4}")
+!d:: Send("^!{Numpad5}")
+!f:: Send("^!{Numpad6}")
+!w:: Send("^!{Numpad7}")
+!e:: Send("^!{Numpad8}")
+!r:: Send("^!{Numpad9}")
+!b:: Send("^!{NumpadDot}")
+!t:: Send("^!{NumpadSub}")
+!g:: Send("^!{NumpadAdd}")
+
 #HotIf WinActive( exe_pr ) && GetKeyState("LButton", "P")
 ; 編集点の追加やクリップ名の変更
 e::  Send("^k")

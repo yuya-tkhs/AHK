@@ -7,7 +7,7 @@ F23:: {
 }
 
 F24:: {
-    if (tenkey) {
+    if (Tenkey) {
         toggleOnishiAndTenkey()
     } else {
         toggleOnishiMode()
@@ -65,6 +65,7 @@ vk1D & Space:: {
 vk1D:: {
     Send("{vk1D}")
     SetOnishiMode(false)
+    SetTenkeyMode(false)
 }
 vk1D & LButton:: Click 2
 vk1D & vk1C::    Send("{vk1C}")

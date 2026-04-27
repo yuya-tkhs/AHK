@@ -6,7 +6,7 @@ tenGui := Gui("+AlwaysOnTop -Caption +ToolWindow -DPIScale")
 tenGui.MarginX := 0
 tenGui.MarginY := 0
 tenTargetWidth := Integer(A_ScreenWidth * 0.125)
-tenGui.Add("Picture", "w" . tenTargetWidth . " h-1", "Tenkey.png")
+tenGui.Add("Picture", "w" . tenTargetWidth . " h-1", A_ScriptDir "\images\Tenkey.png")
 tenGui.Show("Hide")
 
 
@@ -53,4 +53,5 @@ b:: Send("{NumpadDot}")
 
 ; 修飾キーと組み合わせてもNumpadEnterとして動く
 Space:: NumpadEnter
+~Escape:: SetTenkeyMode(false)
 #HotIf
