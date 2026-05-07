@@ -62,24 +62,37 @@ OnCtrlEnterPremiere() {
 ; (1) 最も近い編集点をリップルアウト選択して、指定した値プラストリミング
 ; (2) 最も近い編集点をリップルイン選択して、指定した値マイナストリミング
 ; (1)(2) にターゲットの切り替えを追加したもの
-; +^!q:: Send("^!0!0qq+^{Right}^!0!0^!2")
-; +^!w:: Send("^!0!0ww+^{Left}^!0!0^!2")
+trackPre  := "^{Numpad0}^!{Numpad1}^!{Numpad2}^!{Numpad0}"
+trackPost := "^{Numpad0}^{Numpad7}^!{Numpad0}^!{Numpad1}^!{Numpad2}"
+
 #HotIf WinActive( exe_pr )
 +^!e:: Send("+^k")
-+^!q:: Send("+^!q+^{Right}")
-+^!w:: Send("+^!w+^{Left}")
++^!q:: {
+    Send(trackPre)
+    Sleep(100)
+    Send("+^!q+^{Right}")
+    Sleep(100)
+    Send(trackPost)
+}
++^!w:: {
+    Send(trackPre)
+    Sleep(100)
+    Send("+^!w+^{Left}")
+    Sleep(100)
+    Send(trackPost)
+}
 
 #HotIf WinActive( exe_pr ) && Tenkey
 a & Space:: {
     imgPath := A_ScriptDir "\images\トラックロック.png"
-    if ImageSearch(&imgX, &imgY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*20 " imgPath)
+    if ImageSearch(&imgX, &imgY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*100 " imgPath)
         Click imgX, imgY
     else
         MyTooltip("トラックロックが見つかりません", 1500)
 }
 q & Space:: {
     imgPath := A_ScriptDir "\images\トラックリリース.png"
-    if ImageSearch(&imgX, &imgY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*20 " imgPath)
+    if ImageSearch(&imgX, &imgY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*100 " imgPath)
         Click imgX, imgY
     else
         MyTooltip("トラックリリースが見つかりません", 1500)
@@ -99,19 +112,21 @@ r::  Send("^{Numpad9}")
 b::  Send("^{NumpadDot}")
 t::  Send("^{NumpadSub}")
 g::  Send("^{NumpadAdd}")
-!z:: Send("^!{Numpad0}")
-!x:: Send("^!{Numpad1}")
-!c:: Send("^!{Numpad2}")
-!v:: Send("^!{Numpad3}")
-!s:: Send("^!{Numpad4}")
-!d:: Send("^!{Numpad5}")
-!f:: Send("^!{Numpad6}")
-!w:: Send("^!{Numpad7}")
-!e:: Send("^!{Numpad8}")
-!r:: Send("^!{Numpad9}")
-!b:: Send("^!{NumpadDot}")
-!t:: Send("^!{NumpadSub}")
-!g:: Send("^!{NumpadAdd}")
+
+#HotIf WinActive( exe_pr ) && GetKeyState("RButton", "P") && Tenkey
+z:: Send("^!{Numpad0}")
+x:: Send("^!{Numpad1}")
+c:: Send("^!{Numpad2}")
+v:: Send("^!{Numpad3}")
+s:: Send("^!{Numpad4}")
+d:: Send("^!{Numpad5}")
+f:: Send("^!{Numpad6}")
+w:: Send("^!{Numpad7}")
+e:: Send("^!{Numpad8}")
+r:: Send("^!{Numpad9}")
+b:: Send("^!{NumpadDot}")
+t:: Send("^!{NumpadSub}")
+g:: Send("^!{NumpadAdd}")
 
 #HotIf WinActive( exe_pr ) && GetKeyState("LButton", "P")
 ; 編集点の追加やクリップ名の変更

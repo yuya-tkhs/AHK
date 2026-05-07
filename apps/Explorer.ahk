@@ -116,7 +116,7 @@ MoveFileHere() {
 GDriveOnline() {
     Send("+{F10}")
     Sleep(250)
-    Send("{g 2}{Up 2}{Right}")
+    Send("{g 2}{Up 2}{Right}{Down}{Up}")
 }
 
 CreateTextFile() {
