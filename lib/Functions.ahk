@@ -6,7 +6,11 @@ MyTooltip(text := "", duration := 300) {
         ToolTipEx(text, duration / 1000)
 }
 
-toggleOnishiAndTenkey() {
-    toggleTenkeyMode()
-    toggleOnishiMode()
+ClickImageAndReturn(imgPath, notFoundMsg) {
+    if ImageSearch(&imgX, &imgY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*100 " imgPath) {
+        MouseGetPos(&origX, &origY)
+        Click imgX, imgY
+        MouseMove origX, origY
+    } else
+        MyTooltip(notFoundMsg, 1500)
 }
