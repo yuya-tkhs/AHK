@@ -1,18 +1,5 @@
-F23:: {
-    if (onishi) {
-        toggleOnishiAndTenkey()
-    } else {
-        toggleTenkeyMode()
-    }
-}
-
-F24:: {
-    if (Tenkey) {
-        toggleOnishiAndTenkey()
-    } else {
-        toggleOnishiMode()
-    }
-}
+F23:: toggleOnishiMode()
+F24:: toggleOnishiMode()
 
 vk1D & Space:: {
     MyTooltip("
@@ -65,7 +52,6 @@ vk1D & Space:: {
 vk1D:: {
     Send("{vk1D}")
     SetOnishiMode(false)
-    SetTenkeyMode(false)
 }
 vk1D & LButton:: Click 2
 vk1D & vk1C::    Send("{vk1C}")
@@ -105,10 +91,8 @@ SetTimer(ResetStuckKeys, 1500)
 ; * 他の修飾キー（Ctrl・Shift・Alt等）が押されていても発火する
 ; ~ AHKが処理した後、元のキーイベントをOSにも渡す（Escが通常通り機能する）
 *~Esc:: {
-    if ( WinActive( exe_pr ) || WinActive( exe_ps ) || WinActive( exe_ai ) ) {
+    if ( WinActive( exe_pr ) || WinActive( exe_ps ) || WinActive( exe_ai ) )
         SetOnishiMode( false )
-        SetTenkeyMode( false )
-    }
 }
 
 OnClipboardChange(OnClipChanged)
