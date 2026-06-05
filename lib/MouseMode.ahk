@@ -59,8 +59,8 @@ EnterMouseMode() {
     (
     マウスモード
     - - - - - - - - - - - - - -
-    w e r: Click 2 3 1
-    s f: Wheel ↓ ↑
+    w r: Wheel ↓ ↑
+    s e f: Click 1 2 3
     x c d v: ← ↓ ↑ →
     Space: Slow
     - - - - - - - - - - - - - -
@@ -89,18 +89,19 @@ x::    _SetMM("left",  true)
 x up:: _SetMM("left",  false)
 c::    _SetMM("down",  true)
 c up:: _SetMM("down",  false)
+d::    _SetMM("up",    true)
 d up:: _SetMM("up",    false)
 v::    _SetMM("right", true)
 v up:: _SetMM("right", false)
 
 Space:: return  ; キー入力を抑制しつつGetKeyStateで低速モード判定に使う
 
-s:: Send("{WheelDown}")
-f:: Send("{WheelUp}")
+w:: Send("{WheelDown}")
+r:: Send("{WheelUp}")
 
-w:: Click("Right")
+s:: Click("Left")
 e:: Click("Middle")
-r:: Click("Left")
+f:: Click("Right")
 
 Esc:: ExitMouseMode()
 F22:: ExitMouseMode()
