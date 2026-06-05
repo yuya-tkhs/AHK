@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:ppro-scripting.docsforadobe.dev)",
+      "Read(//w/マイドライブ/Programming/Sppy_1_5/**)",
+      "WebFetch(domain:aiscripts.medium.com)",
+      "WebFetch(domain:sysys.zouri.jp)",
+      "WebFetch(domain:sppy.stars.ne.jp)",
+      "WebFetch(domain:sysys.blog.shinobi.jp)",
+      "Bash(git -c core.quotepath=false status)",
+      "Bash(git -c core.quotepath=false diff --stat)",
+      "Bash(git -c core.quotepath=false diff apps/Common.ahk lib/Functions.ahk lib/TenKey.ahk yuya_allways.ahk)",
+      "Bash(git -c core.quotepath=false diff apps/Illustrator.ahk apps/Premiere.ahk lib/MouseMode.ahk)",
+      "Bash(git -c core.quotepath=false diff -- apps/Common.ahk lib/Functions.ahk yuya_allways.ahk)",
+      "Bash(git -c core.quotepath=false diff -- lib/TenKey.ahk images/TenKey.png)",
+      "Bash(git add *)",
+      "Bash(git -c core.quotepath=false status --short)",
+      "Bash(git commit -m '@ *)",
+      "Bash(git commit *)"
+    ]
+  }
+}
