@@ -1,3 +1,22 @@
+; ===== JsxLauncher 連携 =====================================================
+; CEP拡張 JsxLauncher が監視する連携ファイルにコマンドを書き込み、.jsx を実行する。
+; 仕様: パネルが jsxl_cmd.txt を200ms毎に監視し、実行後にファイルを削除する。
+;   "run:NAME"      … パネルで指定したルートフォルダ配下を名前で実行。
+;                     NAME は「ファイル名.jsx」「サブフォルダ/ファイル名.jsx」どちらも可。
+;                     .jsx省略可・大小無視。
+; 前提: Premiere側で JsxLauncher パネルを開いたままにしておくこと(閉じていると拾われない)。
+global gJsxCmd := A_AppData . "\Adobe\CEP\extensions\JsxLauncher\jsxl_cmd.txt"
+
+; 既存を消してから1コマンドだけ書く(追記の重複を防ぐ)。UTF-8 BOMなし(UTF-8-RAW)。
+JsxWrite(cmd) {
+    try FileDelete gJsxCmd
+    FileAppend cmd, gJsxCmd, "UTF-8-RAW"
+}
+JsxRun(name, *) {
+    JsxWrite("run:" name)
+}
+; ===========================================================================
+
 ; AdobeCommon.ahkのOnCtrlEnterPost()から呼ばれる
 OnCtrlEnterPremiere() {
     Send("{vk1D}")
@@ -41,15 +60,15 @@ OnCtrlEnterPremiere() {
         case "Escape": return
         case "Space":  Send("{vk1D}+7+f{Backspace}{vk1C}")
         case "p":      Send("+1+5{Tab 4}")
-        case "s":      ClickImageAndReturn(A_ScriptDir "\images\スケール変更.png", "スケール変更が見つかりません")
-        case "r":      ClickImageAndReturn(A_ScriptDir "\images\トラックロック.png", "トラックロックが見つかりません"), Send("+3")
-        case "R":      ClickImageAndReturn(A_ScriptDir "\images\トラックリリース.png", "トラックリリースが見つかりません"), Send("+3")
-        case "d":      ClickImageAndReturn(A_ScriptDir "\images\空トラック削除.png", "空トラック削除が見つかりません")
+        case "s":      JsxRun("スケール変更.jsx")
+        case "r":      JsxRun("トラックロック.jsx"), Send("+3")
+        case "R":      JsxRun("トラックリリース.jsx"), Send("+3")
+        case "d":      JsxRun("空トラック削除.jsx")
         case "h":
             Send("!s")  ; Alt+S でシーケンスメニューを開く
             Send("p")   ; P で再生ヘッド位置を自動選択
-        case "2":      ClickImageAndReturn(A_ScriptDir "\images\トラック名変更.png", "トラック名変更が見つかりません")
-        case "a":      ClickImageAndReturn(A_ScriptDir "\images\位置アンカー変更.png", "位置アンカー変更が見つかりません")
+        case "2":      JsxRun("トラック名変更.jsx")
+        case "a":      JsxRun("位置アンカー変更.jsx")
         default:       MyTooltip("無効なキーです", 500)
     }
 }
