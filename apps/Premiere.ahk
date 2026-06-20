@@ -23,7 +23,8 @@ OnCtrlEnterPremiere() {
     Send("^{Tab}")
 }
 
-#HotIf WinActive( exe_pr )
+; ファイルダイアログ（名前を付けて保存 等）ではExplorer側の2ストロークを優先するため除外する
+#HotIf WinActive( exe_pr ) && !IsFileDialog()
 
 ; グラフィックステキストを編集
 ^vk1C:: Send("{vk1C}^![^!{Enter}")

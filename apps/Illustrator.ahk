@@ -1,15 +1,31 @@
 ;;
 ;; Illustrator
 ;;;;
+; 使用するSppyの実行ファイルパス（このパス以外のSppyは別物として扱う）
+global SppyExe := "W:\マイドライブ\Programming\Sppy_1_5\Sppy_1_5.exe"
+
 ; 10秒ごとにチェックを開始（ミリ秒指定）
 SetTimer(CheckIllustrator, 10000)
 CheckIllustrator() {
-    ; Illustratorが実行中か確認（プロセス名で判定）
-    if ProcessExist("Illustrator.exe") {
-        if !ProcessExist("sppy_1_5.exe") {
-            Run("W:\マイドライブ\Programming\Sppy_1_5\Sppy_1_5.exe")
-        }
+    global SppyExe
+    if !ProcessExist("Illustrator.exe")
+        return
+    ; プロセス名ではなく実行パスで判定する。
+    ; 共有ドライブ版など別パスのSppyが動いていたら終了し、マイドライブ版に差し替える。
+    correctRunning := false
+    wrongPids := []
+    query := ComObjGet("winmgmts:").ExecQuery("SELECT ProcessId, ExecutablePath FROM Win32_Process WHERE Name = 'Sppy_1_5.exe'")
+    for proc in query {
+        if (proc.ExecutablePath = SppyExe)
+            correctRunning := true
+        else
+            wrongPids.Push(proc.ProcessId)
     }
+    if correctRunning
+        return
+    for pid in wrongPids
+        ProcessClose(pid)
+    Run(SppyExe)
 }
 
 AiScript(name) {
@@ -18,6 +34,9 @@ AiScript(name) {
 }
 
 #HotIf WinActive(exe_ai)
+
+; Ctrl+Shift+Alt+Enter → F21
+^+!Enter:: Send("{F21}")
 
 ; 2ストローク（0.3秒以内の短押しのみ起動・長押しはIllustratorにそのまま渡す）
 $~^Space:: {

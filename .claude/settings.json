@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "defaultMode": "auto",
     "allow": [
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:ppro-scripting.docsforadobe.dev)",
@@ -17,7 +18,15 @@
       "Bash(git add *)",
       "Bash(git -c core.quotepath=false status --short)",
       "Bash(git commit -m '@ *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(ls \"/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe\" \"/c/Program Files/AutoHotkey/v2/AutoHotkey32.exe\" \"/c/Program Files/AutoHotkey/AutoHotkey.exe\" 2>/dev/null)",
+      "Read(//c/Program Files/AutoHotkey/v2/**)",
+      "Bash(\"/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe\" /Validate \"w:/マイドライブ/Programming/AHK/apps/Explorer.ahk\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(\"/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe\" /Validate \"w:/マイドライブ/Programming/AHK/yuya_allways.ahk\")",
+      "Bash(\"/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe\" /ErrorStdOut /Validate \"w:/マイドライブ/Programming/AHK/yuya_allways.ahk\")",
+      "PowerShell($ahk = \"C:\\\\Program Files\\\\AutoHotkey\\\\v2\\\\AutoHotkey64.exe\"; $out = & $ahk /ErrorStdOut /validate \"w:\\\\マイドライブ\\\\Programming\\\\AHK\\\\yuya_allways.ahk\"; \"EXIT=$LASTEXITCODE\"; $out)",
+      "PowerShell($ahk = \"C:\\\\Program Files\\\\AutoHotkey\\\\v2\\\\AutoHotkey64.exe\"; $p = Start-Process -FilePath $ahk -ArgumentList '/ErrorStdOut','/validate','w:\\\\マイドライブ\\\\Programming\\\\AHK\\\\yuya_allways.ahk' -Wait -PassThru -RedirectStandardError \"$env:TEMP\\\\ahkerr.txt\"; \"EXIT=$\\($p.ExitCode\\)\"; Get-Content \"$env:TEMP\\\\ahkerr.txt\" -ErrorAction SilentlyContinue)"
     ]
   }
 }

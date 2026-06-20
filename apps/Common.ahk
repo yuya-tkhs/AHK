@@ -1,5 +1,4 @@
 F23:: toggleOnishiMode()
-F24:: toggleOnishiMode()
 
 vk1D & Space:: {
     MyTooltip("
@@ -16,6 +15,7 @@ vk1D & Space:: {
     c: Color Picker
     v: Clipboard
     x: Windows Menu
+    h: 音声入力
     r: Reload
     )", 5000)
     ih := InputHook("L1 T2") ; 次の1文字を待機 (L1: 1文字入力で終了, T2: 2秒でタイムアウト)
@@ -45,6 +45,7 @@ vk1D & Space:: {
         case "v":          Send("#v")
         case "x":          Send("#x")
         case "c":          Send("#+c")
+        case "h":          Send("#h")             ; Windows 音声入力
         default:           MyTooltip("無効なキーです", 500)
     }
 }

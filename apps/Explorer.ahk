@@ -1,4 +1,4 @@
-#HotIf WinActive("ahk_class CabinetWClass")
+#HotIf WinActive("ahk_class CabinetWClass") or IsFileDialog()
 
 ; 2ストローク
 ^Space:: {
@@ -12,6 +12,7 @@
     c: 開いているフォルダのパスを取得
     g: Googleドライブの設定変更
     d: Downloadsの最新ファイルを移動
+    v: コピーしたパスへ移動
     - - - - - - - - - - - - - - - -
     1: 動画フォルダの作成
     2: Original, Proxy
@@ -37,6 +38,7 @@
         case "c":      RunGetExplorerPath()
         case "g":      GDriveOnline()
         case "d":      MoveFileHere()
+        case "v":      NavigateToClipboardPath()
         case "1":      CreateFolders(["01_Master","02_Assets","03_Works","04_Projects","05_Render"])
         case "2":      CreateFolders(["Original","Proxy"])
         default:       MyTooltip("無効なキーです", 500)
@@ -162,7 +164,70 @@ GetCurrentExplorerPath() {
     if (tab != "") {
         return tab.Document.Folder.Self.Path
     }
+    ; 本物のエクスプローラータブが取れない場合（ファイルダイアログ等）は
+    ; アドレスバー経由でフルパスを取得する
+    if (IsFileDialog()) {
+        return GetPathViaAddressBar()
+    }
     return ""
+}
+
+; ファイルを開く/保存するダイアログ（#32770）かどうかを判定する。
+; MsgBox等の汎用ダイアログと区別するため、ファイル一覧（DirectUIHWND）の有無で確認する。
+IsFileDialog() {
+    hwnd := WinActive("ahk_class #32770")
+    if (!hwnd) {
+        return false
+    }
+    for ctrl in WinGetControls("ahk_id " hwnd) {
+        if (InStr(ctrl, "DirectUIHWND") = 1) {
+            return true
+        }
+    }
+    return false
+}
+
+; アドレスバー（Alt+D）でフルパスを選択 → コピーして現在フォルダのパスを取得する。
+; ダイアログにはエクスプローラーのCOMタブが無いためのフォールバック。
+GetPathViaAddressBar() {
+    saved := ClipboardAll()
+    A_Clipboard := ""
+    Send("!d")          ; アドレスバーにフォーカス（フルパスが選択状態になる）
+    Sleep(120)
+    Send("^c")          ; 選択中のパスをコピー
+    path := ""
+    if (ClipWait(0.5)) {
+        path := Trim(A_Clipboard)
+    }
+    Send("{Escape}")    ; アドレスバーをパンくず表示に戻す
+    A_Clipboard := saved
+    return path
+}
+
+; クリップボードにコピーされているパスへアドレスバー経由で移動する。
+; フォルダパスならそのフォルダへ、ファイルパスならその親フォルダへ移動する。
+NavigateToClipboardPath() {
+    raw := Trim(A_Clipboard, " `t`r`n`"")  ; 前後の空白・改行・引用符を除去
+    if (raw = "") {
+        MyTooltip("クリップボードにパスがありません", 2000)
+        return
+    }
+    if (DirExist(raw)) {
+        target := raw
+    } else if (FileExist(raw)) {
+        SplitPath(raw, , &target)          ; ファイルの場合は親フォルダへ
+    } else {
+        MyTooltip("有効なパスではありません:`n" raw, 2500)
+        return
+    }
+    Send("!d")          ; アドレスバーにフォーカス
+    Sleep(120)
+    Send("^a")          ; 既存テキストを全選択
+    A_Clipboard := target ; クリップボード経由で貼り付け
+    ClipWait(0.5)
+    Send("^v")
+    Sleep(80)
+    Send("{Enter}")     ; 移動
 }
 
 OpenBgMenu( keysToSend := "" ) {
