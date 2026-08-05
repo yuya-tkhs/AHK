@@ -70,7 +70,7 @@ OnCtrlEnterPremiere() {
         case "h":
             Send("!s")  ; Alt+S でシーケンスメニューを開く
             Send("p")   ; P で再生ヘッド位置を自動選択
-        case "2":      JsxRun("トラック名変更.jsx")
+        case "2":      JsxRun("リネーム.jsx")
         case "a":      JsxRun("位置アンカー変更.jsx")
         default:       MyTooltip("無効なキーです", 500)
     }
