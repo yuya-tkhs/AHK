@@ -67,6 +67,7 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 - `ResetStuckKeys()` … 1500ms間隔で修飾キーのスタック（論理ON・物理OFF）を検出して自動解除
 - `OnClipboardChange` … コピーされたテキストがURLなら `CleanUrl()` で自動整形
+- `~Esc` … 400ms以内にEscを2回押すと `{vk1D}`（無変換＝半角英数）を送る。`~` 付きなのでEsc自体は各アプリに素通しされる。2ストローク待機中はInputHookがEscを横取りするため発火せず、キャンセル動作が優先される
 
 ### startup_manager の動作
 
