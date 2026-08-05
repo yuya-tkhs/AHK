@@ -1,5 +1,3 @@
-F23:: toggleOnishiMode()
-
 vk1D & Space:: {
     MyTooltip("
     (
@@ -50,10 +48,7 @@ vk1D & Space:: {
     }
 }
 
-vk1D:: {
-    Send("{vk1D}")
-    SetOnishiMode(false)
-}
+vk1D:: Send("{vk1D}")
 vk1D & LButton:: Click 2
 vk1D & vk1C::    Send("{vk1C}")
 vk1D & Up::      Send("{Blind}{Up 5}")
@@ -89,13 +84,6 @@ ResetStuckKeys() {
 }
 SetTimer(ResetStuckKeys, 1500)
 
-; * 他の修飾キー（Ctrl・Shift・Alt等）が押されていても発火する
-; ~ AHKが処理した後、元のキーイベントをOSにも渡す（Escが通常通り機能する）
-*~Esc:: {
-    if ( WinActive( exe_pr ) || WinActive( exe_ps ) || WinActive( exe_ai ) )
-        SetOnishiMode( false )
-}
-
 OnClipboardChange(OnClipChanged)
 OnClipChanged(DataType) { ; DataTypeには 0(空), 1(テキスト), 2(画像などのファイル) が入る
     static ignoreNext := false
@@ -118,11 +106,8 @@ OnClipChanged(DataType) { ; DataTypeには 0(空), 1(テキスト), 2(画像な�
 ; アプリ別の追加処理はAdobeCommon.ahkのOnCtrlEnterPost()に記述
 ^Enter:: {
     Send("^{Enter}")
-    KeyWait("Ctrl")  ; Ctrlが離されてからモード処理・IME操作を実行（スタック防止）
-    if (onishi)
-        SetOnishiMode(false)
-    else
-        OnCtrlEnterPost()
+    KeyWait("Ctrl")  ; Ctrlが離されてからIME操作を実行（スタック防止）
+    OnCtrlEnterPost()
 }
 
 ~^s:: {

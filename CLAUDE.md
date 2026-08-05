@@ -15,31 +15,19 @@ apps/
   Illustrator.ahk          # Illustrator起動時にSppy_1_5を自動起動
   AdobeCommon.ahk          # Adobe共通設定（現在空）
 lib/
-  Functions.ahk            # 共通関数（MyTooltip, toggleOnishiAndTenkey）
+  Functions.ahk            # 共通関数（MyTooltip 等）
   Hotstring.ahk            # テキスト展開（ddd → 今日の日付MMDD）
-  Laptop.ahk               # ラップトップ専用設定（CapsLock → Ctrl）
   Mouse.ahk                # 中クリックスクロール
-  Onishi.ahk               # 大西配列モード
-  TenKey.ahk               # テンキーモード
+  ToolTipEx.ahk            # ツールチップ描画の拡張
+  run_ai_script.ahk        # Illustrator の JSX 実行連携
 ```
 
 ## キーの表記
 
 - `vk1D` = 無変換キー（日本語キーボード）
 - `vk1C` = 変換キー（日本語キーボード）
-- `F23` / `F24` = 大西配列・テンキーモードの切り替えトリガー
 
 ## 主要機能
-
-### 入力モード切り替え（lib/Onishi.ahk, lib/TenKey.ahk）
-
-| キー | 動作 |
-|------|------|
-| F23  | 大西配列 ↔ テンキーモードの切り替え |
-| F24  | テンキー ↔ 大西配列モードの切り替え |
-
-- 各モードはグローバル変数 `onishi` / `Tenkey` で管理
-- アクティブ時は画面右下にOSD画像（Onishi.png / TenKey.png）を表示
 
 ### 2ストロークコマンド
 
