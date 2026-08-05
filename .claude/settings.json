@@ -2,31 +2,20 @@
   "permissions": {
     "defaultMode": "auto",
     "allow": [
+      "Read(//w/マイドライブ/Programming/Sppy_1_5/**)",
+      "Read(//c/Program Files/AutoHotkey/v2/**)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:ppro-scripting.docsforadobe.dev)",
-      "Read(//w/マイドライブ/Programming/Sppy_1_5/**)",
       "WebFetch(domain:aiscripts.medium.com)",
-      "WebFetch(domain:sysys.zouri.jp)",
       "WebFetch(domain:sppy.stars.ne.jp)",
+      "WebFetch(domain:sysys.zouri.jp)",
       "WebFetch(domain:sysys.blog.shinobi.jp)",
-      "Bash(git -c core.quotepath=false status)",
-      "Bash(git -c core.quotepath=false diff --stat)",
-      "Bash(git -c core.quotepath=false diff apps/Common.ahk lib/Functions.ahk lib/TenKey.ahk yuya_allways.ahk)",
-      "Bash(git -c core.quotepath=false diff apps/Illustrator.ahk apps/Premiere.ahk lib/MouseMode.ahk)",
-      "Bash(git -c core.quotepath=false diff -- apps/Common.ahk lib/Functions.ahk yuya_allways.ahk)",
-      "Bash(git -c core.quotepath=false diff -- lib/TenKey.ahk images/TenKey.png)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
       "Bash(git add *)",
-      "Bash(git -c core.quotepath=false status --short)",
-      "Bash(git commit -m '@ *)",
       "Bash(git commit *)",
-      "Bash(ls \"/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe\" \"/c/Program Files/AutoHotkey/v2/AutoHotkey32.exe\" \"/c/Program Files/AutoHotkey/AutoHotkey.exe\" 2>/dev/null)",
-      "Read(//c/Program Files/AutoHotkey/v2/**)",
-      "Bash(\"/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe\" //Validate \"w:/マイドライブ/Programming/AHK/apps/Explorer.ahk\")",
-      "Bash(echo \"exit: $?\")",
-      "Bash(\"/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe\" //Validate \"w:/マイドライブ/Programming/AHK/yuya_allways.ahk\")",
-      "Bash(\"/c/Program Files/AutoHotkey/v2/AutoHotkey64.exe\" //ErrorStdOut //Validate \"w:/マイドライブ/Programming/AHK/yuya_allways.ahk\")",
-      "PowerShell($ahk = \"C:\\\\Program Files\\\\AutoHotkey\\\\v2\\\\AutoHotkey64.exe\"; $out = & $ahk /ErrorStdOut /validate \"w:\\\\マイドライブ\\\\Programming\\\\AHK\\\\yuya_allways.ahk\"; \"EXIT=$LASTEXITCODE\"; $out)",
-      "PowerShell($ahk = \"C:\\\\Program Files\\\\AutoHotkey\\\\v2\\\\AutoHotkey64.exe\"; $p = Start-Process -FilePath $ahk -ArgumentList '/ErrorStdOut','/validate','w:\\\\マイドライブ\\\\Programming\\\\AHK\\\\yuya_allways.ahk' -Wait -PassThru -RedirectStandardError \"$env:TEMP\\\\ahkerr.txt\"; \"EXIT=$\\($p.ExitCode\\)\"; Get-Content \"$env:TEMP\\\\ahkerr.txt\" -ErrorAction SilentlyContinue)"
+      "Bash(git -c core.quotepath=false status *)",
+      "Bash(git -c core.quotepath=false diff *)"
     ]
   }
 }
