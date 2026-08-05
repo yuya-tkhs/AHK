@@ -33,10 +33,49 @@ AiScript(name) {
     ComObjActive("Illustrator.Application").DoJavaScriptFile(base name)
 }
 
+; jsxを別AHKプロセスで非同期起動する。
+; DoJavaScriptFileのブロックを子プロセスに肩代わりさせ、本体をフリーズさせない。
+global _aiChildPid := 0
+; name: 実行するjsxファイル名
+; imeDialogTitle: 指定するとそのダイアログが開いている間だけ日本語入力をON（閉じたらOFF）
+RunAiScriptAsync(name, imeDialogTitle := "") {
+    global _aiChildPid
+    ; 多重起動ガード：前回の子がまだ生きていたら起動しない
+    if (_aiChildPid && ProcessExist(_aiChildPid))
+        return
+    base := "W:\共有ドライブ\wc動画\sync\Assets\adobe-scripts_tkhs\illustrator\"
+    childPath := A_ScriptDir "\lib\run_ai_script.ahk"
+    Run('"' A_AhkPath '" "' childPath '" "' base name '"', , "Hide", &_aiChildPid)
+    ; IME連動（WinWait/WinWaitCloseは割り込み可能なので本体は止まらない）
+    if (imeDialogTitle != "") {
+        if WinWait(imeDialogTitle, , 5) {
+            Sleep(80)               ; ダイアログがフォーカスを得るのを待つ
+            Send("{vk1C}")          ; 日本語入力ON
+            WinWaitClose(imeDialogTitle)
+            Send("{vk1D}")          ; 半角英数OFF
+        }
+    }
+}
+
 #HotIf WinActive(exe_ai)
 
-; Ctrl+Shift+Alt+Enter → F21
-^+!Enter:: Send("{F21}")
+; Alt+Enter → MultiEditText.jsx 起動（非同期・表示中は日本語入力ON）
+!Enter:: RunAiScriptAsync("MultiEditText.jsx", "Multi-edit Text")
+
+; MultiEditTextダイアログ表示中のみ Ctrl+Enter を上書き。
+; 画像でOKボタンを探してクリックし、カーソルを元の位置へ戻す。
+#HotIf WinActive("Multi-edit Text")
+^Enter:: ClickImageAndReturn(A_ScriptDir "\images\ai_OK.png", "OKボタンが見つかりません", 150)
+
+; テキストプロパティ設定ダイアログ表示中のみ Ctrl+Enter を上書き（OK画像クリック＋カーソル復帰）
+#HotIf WinActive("テキストプロパティ設定")
+^Enter:: ClickImageAndReturn(A_ScriptDir "\images\ai_OK.png", "OKボタンが見つかりません", 150)
+
+; 位置・サイズダイアログ表示中のみ Ctrl+Enter を上書き（OK画像クリック＋カーソル復帰）
+#HotIf WinActive("位置・サイズ")
+^Enter:: ClickImageAndReturn(A_ScriptDir "\images\ai_OK.png", "OKボタンが見つかりません", 150)
+
+#HotIf WinActive(exe_ai)
 
 ; 2ストローク（0.3秒以内の短押しのみ起動・長押しはIllustratorにそのまま渡す）
 $~^Space:: {
@@ -56,6 +95,7 @@ $~^Space:: {
     - - - - - - - - - - - - - - - -
     t: テキストプロパティエディタ
     f: アートボードへ移動
+    g: 位置・サイズ
     2: アートボード名変更
     )", 5000)
     ih := InputHook("L1 T5")
@@ -72,7 +112,8 @@ $~^Space:: {
     }
     switch capturedKey {
         case "Escape": return
-        case "t": AiScript("text_property_editor.jsx")
+        case "t": RunAiScriptAsync("text_property_editor.jsx")
+        case "g": RunAiScriptAsync("xywh_input.jsx")
         case "f": AiScript("go_to_artboard.jsx")
         case "2": AiScript("rename_active_artboard.jsx")
         default: MyTooltip("無効なキーです", 500)

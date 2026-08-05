@@ -98,6 +98,20 @@ SetTimer(ResetStuckKeys, 1500)
 
 OnClipboardChange(OnClipChanged)
 OnClipChanged(DataType) { ; DataTypeには 0(空), 1(テキスト), 2(画像などのファイル) が入る
+    static ignoreNext := false
+    if (ignoreNext) {           ; 自分でセットした整形結果によるイベントは無視（無限ループ防止）
+        ignoreNext := false
+        return
+    }
+    if (DataType = 1 && IsUrl(A_Clipboard)) {
+        cleaned := CleanUrl(A_Clipboard)
+        if (cleaned != A_Clipboard) {
+            ignoreNext := true
+            A_Clipboard := cleaned
+            MyTooltip("URL整形: " cleaned, 1500)
+            return
+        }
+    }
     MyTooltip("コピー", 1500)
 }
 

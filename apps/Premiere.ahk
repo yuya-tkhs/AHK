@@ -39,6 +39,7 @@ OnCtrlEnterPremiere() {
     s: スケール変更
     a: 位置アンカー変更
     d: 空のトラックを削除
+    f: クリップを全長に
     h: 再生ヘッド位置を自動選択
     r: トラックロック
     R: トラックリリース
@@ -62,9 +63,10 @@ OnCtrlEnterPremiere() {
         case "Space":  Send("{vk1D}+7+f{Backspace}{vk1C}")
         case "p":      Send("+1+5{Tab 4}")
         case "s":      JsxRun("スケール変更.jsx")
-        case "r":      JsxRun("トラックロック.jsx"), Send("+3")
-        case "R":      JsxRun("トラックリリース.jsx"), Send("+3")
-        case "d":      JsxRun("空トラック削除.jsx")
+        case "r":      JsxRun("トラックロック.jsx")
+        case "R":      JsxRun("トラックリリース.jsx")
+        case "d":      JsxRun("空トラック削除.jsx"), Send("=")  ; 全トラック最小化
+        case "f":      JsxRun("クリップを全長に.jsx")
         case "h":
             Send("!s")  ; Alt+S でシーケンスメニューを開く
             Send("p")   ; P で再生ヘッド位置を自動選択

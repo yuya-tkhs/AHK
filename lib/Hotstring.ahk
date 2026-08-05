@@ -10,3 +10,11 @@
     Send(currentDate)
     return
 }
+
+;;
+;; 「ttt」と入力されたら「tkhs」を挿入
+;;;;
+:*C:ttt:: {
+    Send("tkhs")
+    return
+}
