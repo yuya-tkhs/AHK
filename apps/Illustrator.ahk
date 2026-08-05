@@ -97,6 +97,7 @@ $~^Space:: {
     f: アートボードへ移動
     g: 位置・サイズ
     m: アートボード枠を作成
+    s: 中身を後ろへずらす
     2: アートボード名変更
     )", 5000)
     ih := InputHook("L1 T5")
@@ -116,6 +117,7 @@ $~^Space:: {
         case "t": RunAiScriptAsync("text_property_editor.jsx")
         case "g": RunAiScriptAsync("xywh_input.jsx")
         case "m": RunAiScriptAsync("create_artboard_shape.jsx")
+        case "s": RunAiScriptAsync("shift_artboard_contents.jsx")
         case "f": AiScript("go_to_artboard.jsx")
         case "2": AiScript("rename_active_artboard.jsx")
         default: MyTooltip("無効なキーです", 500)
