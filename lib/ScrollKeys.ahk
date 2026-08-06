@@ -1,7 +1,7 @@
 ;;
 ;; キーによる加速スクロール（ペンタブのスクロール操作を模したもの）
 ;;   F20 = 左 / F21 = 右 / F22 = 下 / F23 = 上
-;;   単押し → 1ノッチだけ送る（細かい操作用）
+;;   単押し → MIN_NOTCH ぶんだけ送る（細かい操作用）
 ;;   長押し → 一定時間ごとに1回あたりのノッチ数が増え、MAX_NOTCH で頭打ちになる
 ;;
 ;; 送信先はマウスカーソル下のウィンドウ（Windowsの標準挙動）
@@ -19,6 +19,7 @@ AccelScroll( key, dir ) {
     static REPEAT_DELAY := 220 ; 長押し判定までの猶予(ms)。これ未満で離せば単押し
     static INTERVAL     := 40  ; 長押し中のリピート周期(ms)
     static RAMP_STEP    := 120 ; この時間(ms)経過ごとに1回あたりのノッチ数が+1
+    static MIN_NOTCH    := 1.5 ; 1回あたりの最小ノッチ数（単押しもこの量。小数可）
     static MAX_NOTCH    := 5   ; 1回あたりの最大ノッチ数（アッパー）
     ; 上記初期値では 220 + 120*4 = 約700ms で上限に到達する
     ; -----------------------------------------------------------------
@@ -30,8 +31,8 @@ AccelScroll( key, dir ) {
         return
     running := true
 
-    ; 単押し分：まず1ノッチ送る
-    Send "{" . dir . "}"
+    ; 単押し分：まず最小量を送る
+    SendWheel( dir, MIN_NOTCH )
     st := A_TickCount
 
     while ( GetKeyState( key, "P" ) ) {
@@ -41,10 +42,27 @@ AccelScroll( key, dir ) {
             Sleep 15
             continue
         }
-        n := Min( MAX_NOTCH, 1 + ( elapsed - REPEAT_DELAY ) // RAMP_STEP )
-        Send "{" . dir . " " . n . "}"
+        n := Min( MAX_NOTCH, MIN_NOTCH + ( elapsed - REPEAT_DELAY ) // RAMP_STEP )
+        SendWheel( dir, n )
         Sleep INTERVAL
     }
 
     running := false
+}
+
+; ホイールイベントを生のデルタ値で送る（1ノッチ = 120単位）。
+; Send "{WheelDown n}" は n が整数のみだが、こちらは 1.5 のような小数ノッチを送れる。
+; 小数デルタを解さない古いアプリでも、内部で余りを累積するため平均量は指定どおりになる。
+SendWheel( dir, notches ) {
+    static MOUSEEVENTF_WHEEL  := 0x0800 ; 垂直ホイール
+    static MOUSEEVENTF_HWHEEL := 0x1000 ; 水平ホイール
+    ; 正の値 = 上／右、負の値 = 下／左
+    switch dir {
+        case "WheelUp":    flag := MOUSEEVENTF_WHEEL,  sign :=  1
+        case "WheelDown":  flag := MOUSEEVENTF_WHEEL,  sign := -1
+        case "WheelRight": flag := MOUSEEVENTF_HWHEEL, sign :=  1
+        case "WheelLeft":  flag := MOUSEEVENTF_HWHEEL, sign := -1
+        default: return
+    }
+    DllCall( "mouse_event", "UInt", flag, "Int", 0, "Int", 0, "Int", Round( sign * notches * 120 ), "UPtr", 0 )
 }

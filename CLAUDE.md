@@ -52,8 +52,9 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 | F22  | 下スクロール |
 | F23  | 上スクロール |
 
-- 単押しは1ノッチ、長押しは経過時間に応じて1回あたりのノッチ数が増え、上限で頭打ちになる
-- 速度は `AccelScroll()` 冒頭の `static` 定数（`REPEAT_DELAY` / `INTERVAL` / `RAMP_STEP` / `MAX_NOTCH`）で調整する
+- 単押しは `MIN_NOTCH`（初期値1.5ノッチ）、長押しは経過時間に応じて増え、上限で頭打ちになる
+- 速度は `AccelScroll()` 冒頭の `static` 定数（`REPEAT_DELAY` / `INTERVAL` / `RAMP_STEP` / `MIN_NOTCH` / `MAX_NOTCH`）で調整する
+- 送信は `SendWheel()` が `mouse_event` で生のデルタ値（1ノッチ = 120単位）を送る。`Send "{WheelDown n}"` と違い 1.5 のような小数ノッチを扱えるため
 - 多重起動ガードの `static` は4方向で共有のため、同時に走るスクロールは1方向のみ
 - 横スクロールは `WheelLeft` / `WheelRight` を解釈するアプリでのみ動作する
 
