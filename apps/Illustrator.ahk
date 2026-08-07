@@ -98,6 +98,7 @@ $~^Space:: {
     g: 位置・サイズ
     m: アートボード枠を作成
     s: 中身を後ろへずらす
+    a: アートボードを追加
     e: PNG書き出し（10倍）
     E: PNG書き出し（等倍）
     2: アートボード名変更
@@ -120,6 +121,7 @@ $~^Space:: {
         case "g": RunAiScriptAsync("xywh_input.jsx")
         case "m": RunAiScriptAsync("create_artboard_shape.jsx")
         case "s": RunAiScriptAsync("shift_artboard_contents.jsx")
+        case "a": RunAiScriptAsync("add_new_artboard.jsx")
         ; switchは既定で大文字小文字を区別するため e / E をそのまま分岐できる
         case "e": RunAiScriptAsync("render_active_artboard_10x.jsx")
         case "E": RunAiScriptAsync("render_active_artboard.jsx")
