@@ -98,6 +98,8 @@ $~^Space:: {
     g: 位置・サイズ
     m: アートボード枠を作成
     s: 中身を後ろへずらす
+    e: PNG書き出し（10倍）
+    E: PNG書き出し（等倍）
     2: アートボード名変更
     )", 5000)
     ih := InputHook("L1 T5")
@@ -118,6 +120,9 @@ $~^Space:: {
         case "g": RunAiScriptAsync("xywh_input.jsx")
         case "m": RunAiScriptAsync("create_artboard_shape.jsx")
         case "s": RunAiScriptAsync("shift_artboard_contents.jsx")
+        ; switchは既定で大文字小文字を区別するため e / E をそのまま分岐できる
+        case "e": RunAiScriptAsync("render_active_artboard_10x.jsx")
+        case "E": RunAiScriptAsync("render_active_artboard.jsx")
         case "f": AiScript("go_to_artboard.jsx")
         case "2": AiScript("rename_active_artboard.jsx")
         default: MyTooltip("無効なキーです", 500)
