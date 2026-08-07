@@ -19,7 +19,6 @@ global exe_ae := "ahk_exe AfterFX.exe"
 global exe_bl := "ahk_exe blender.exe"
 global exe_pureref := "ahk_exe PureRef.exe"
 global exe_chrome := "ahk_exe chrome.exe"
-global exe_code := "ahk_exe Code.exe"
 global exe_notepad := "ahk_exe notepad.exe"
 global class_explorer := "ahk_class CabinetWClass"
 ; デスクトップ。通常は Progman、壁紙スライドショー中は WorkerW が前面になる

@@ -47,14 +47,17 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 ### F21/F22 のアプリ別割り当て（lib/AppKeys.ahk）
 
+上から順に判定し、最初に一致したものが使われる。
+
 | 対象 | F21 | F22 |
 |------|-----|-----|
-| デフォルト | やり直し `^+z` | 元に戻す `^z` |
+| デスクトップ | 無効 | 無効 |
+| Chrome / エクスプローラー | 次のタブ `^Tab` | 前のタブ `^+Tab` |
 | メモ帳 | やり直し `^y` | 元に戻す `^z` |
-| Chrome / エクスプローラー / デスクトップ / VSCode | 次のタブ `^Tab` | 前のタブ `^+Tab` |
+| デフォルト | やり直し `^+z` | 元に戻す `^z` |
 
+- デスクトップを無効にしているのは、`^z` がファイル操作（移動・削除・リネーム）の巻き戻しになり誤操作の影響が大きいため
 - `#HotIf` を並べず `AppKey()` の中で分岐する。「デフォルト＋例外」の優先順位が一目で分かるため（`AdobeCommon.ahk` の `OnCtrlEnterPost()` と同じ方針）
-- VSCode と Chrome はどちらも Electron でウィンドウクラスが `Chrome_WidgetWin_1` のため、`ahk_exe` で判定する
 
 ### キー加速スクロール（lib/ScrollKeys.ahk）
 
@@ -92,7 +95,7 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 - ウィンドウ判定は `#HotIf WinActive(...)` で行い、ブロック終端は `#HotIf` で閉じる
 - ウィンドウ識別子は yuya_allways.ahk でグローバル変数として定義
   - `exe_pr` / `exe_ai` / `exe_ps` / `exe_au` / `exe_ae` / `exe_bl` / `exe_pureref`
-  - `exe_chrome` / `exe_code` / `exe_notepad`
+  - `exe_chrome` / `exe_notepad`
   - `class_explorer` / `class_desktop` / `class_desktop_alt`（デスクトップは Progman、壁紙スライドショー中は WorkerW）
 - 新しいアプリ固有のホットキーは `apps/` に追加
 - 共通ユーティリティ関数は `lib/Functions.ahk` に追加
