@@ -19,6 +19,7 @@ lib/
   Hotstring.ahk            # テキスト展開（ddd → 今日の日付MMDD / ttt → tkhs）
   Mouse.ahk                # 中クリックスクロール
   ScrollKeys.ahk           # F23/F24 によるキー加速スクロール
+  AppKeys.ahk              # F21/F22 のアプリ別割り当て（元に戻す／タブ切り替え）
   ToolTipEx.ahk            # ツールチップ描画の拡張
   run_ai_script.ahk        # JSXを別プロセスで実行する子スクリプト
 images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
@@ -28,6 +29,7 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 - `vk1D` = 無変換キー（日本語キーボード）
 - `vk1C` = 変換キー（日本語キーボード）
+- `F21` / `F22` = アプリ別割り当て（元に戻す・やり直し／タブ切り替え）
 - `F23` / `F24` = キー加速スクロール（下 / 上）
 
 ## 主要機能
@@ -42,6 +44,17 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 | Explorer（Explorer.ahk） | `Ctrl + Space` | ファイルダイアログでも有効（`IsFileDialog()`で判定） |
 | Premiere（Premiere.ahk） | `Ctrl + Space` | ファイルダイアログ中は無効 |
 | Illustrator（Illustrator.ahk） | `Ctrl + Space` | 0.3秒以内の短押しのみ起動。長押しはAiにそのまま渡す |
+
+### F21/F22 のアプリ別割り当て（lib/AppKeys.ahk）
+
+| 対象 | F21 | F22 |
+|------|-----|-----|
+| デフォルト | 元に戻す `^z` | やり直し `^+z` |
+| メモ帳 | 元に戻す `^z` | やり直し `^y` |
+| Chrome / エクスプローラー / デスクトップ / VSCode | 次のタブ `^Tab` | 前のタブ `^+Tab` |
+
+- `#HotIf` を並べず `AppKey()` の中で分岐する。「デフォルト＋例外」の優先順位が一目で分かるため（`AdobeCommon.ahk` の `OnCtrlEnterPost()` と同じ方針）
+- VSCode と Chrome はどちらも Electron でウィンドウクラスが `Chrome_WidgetWin_1` のため、`ahk_exe` で判定する
 
 ### キー加速スクロール（lib/ScrollKeys.ahk）
 
@@ -78,7 +91,9 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 - AutoHotkey v2.0 構文を使用（v1.xとは非互換）
 - ウィンドウ判定は `#HotIf WinActive(...)` で行い、ブロック終端は `#HotIf` で閉じる
 - ウィンドウ識別子は yuya_allways.ahk でグローバル変数として定義
-  - `exe_pr` / `exe_ai` / `exe_ps` / `exe_au` / `exe_ae` / `exe_bl` / `exe_pureref` / `class_explorer`
+  - `exe_pr` / `exe_ai` / `exe_ps` / `exe_au` / `exe_ae` / `exe_bl` / `exe_pureref`
+  - `exe_chrome` / `exe_code` / `exe_notepad`
+  - `class_explorer` / `class_desktop` / `class_desktop_alt`（デスクトップは Progman、壁紙スライドショー中は WorkerW）
 - 新しいアプリ固有のホットキーは `apps/` に追加
 - 共通ユーティリティ関数は `lib/Functions.ahk` に追加
 - ソースはすべて UTF-8（BOM無し）。新規ファイルにも BOM を付けない
