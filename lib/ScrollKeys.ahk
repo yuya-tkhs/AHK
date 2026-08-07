@@ -1,16 +1,13 @@
 ;;
 ;; キーによる加速スクロール（ペンタブのスクロール操作を模したもの）
-;;   F20 = 左 / F21 = 右 / F22 = 下 / F23 = 上
+;;   F22 = 下 / F23 = 上
 ;;   単押し → MIN_NOTCH ぶんだけ送る（細かい操作用）
 ;;   長押し → 一定時間ごとに1回あたりのノッチ数が増え、MAX_NOTCH で頭打ちになる
 ;;
 ;; 送信先はマウスカーソル下のウィンドウ（Windowsの標準挙動）
 ;; 速度の調整は AccelScroll() 冒頭の static 定数で行う
-;; 横スクロールは対応アプリのみ（WheelLeft/WheelRight を解釈しないアプリでは無反応）
 ;;;;
 
-F20:: AccelScroll( "F20", "WheelLeft" )
-F21:: AccelScroll( "F21", "WheelRight" )
 F22:: AccelScroll( "F22", "WheelDown" )
 F23:: AccelScroll( "F23", "WheelUp" )
 
@@ -25,7 +22,7 @@ AccelScroll( key, dir ) {
     ; -----------------------------------------------------------------
 
     ; OSのキーリピートによる多重起動を防ぐ
-    ; static は4方向で共有されるため、同時に走るスクロールは常に1方向だけになる
+    ; static は上下で共有されるため、同時に走るスクロールは常に1方向だけになる
     static running := false
     if ( running )
         return
@@ -54,15 +51,7 @@ AccelScroll( key, dir ) {
 ; Send "{WheelDown n}" は n が整数のみだが、こちらは 1.5 のような小数ノッチを送れる。
 ; 小数デルタを解さない古いアプリでも、内部で余りを累積するため平均量は指定どおりになる。
 SendWheel( dir, notches ) {
-    static MOUSEEVENTF_WHEEL  := 0x0800 ; 垂直ホイール
-    static MOUSEEVENTF_HWHEEL := 0x1000 ; 水平ホイール
-    ; 正の値 = 上／右、負の値 = 下／左
-    switch dir {
-        case "WheelUp":    flag := MOUSEEVENTF_WHEEL,  sign :=  1
-        case "WheelDown":  flag := MOUSEEVENTF_WHEEL,  sign := -1
-        case "WheelRight": flag := MOUSEEVENTF_HWHEEL, sign :=  1
-        case "WheelLeft":  flag := MOUSEEVENTF_HWHEEL, sign := -1
-        default: return
-    }
-    DllCall( "mouse_event", "UInt", flag, "Int", 0, "Int", 0, "Int", Round( sign * notches * 120 ), "UPtr", 0 )
+    static MOUSEEVENTF_WHEEL := 0x0800 ; 垂直ホイール
+    sign := ( dir = "WheelUp" ) ? 1 : -1 ; 正の値 = 上、負の値 = 下
+    DllCall( "mouse_event", "UInt", MOUSEEVENTF_WHEEL, "Int", 0, "Int", 0, "Int", Round( sign * notches * 120 ), "UPtr", 0 )
 }

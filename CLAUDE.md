@@ -28,7 +28,7 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 - `vk1D` = 無変換キー（日本語キーボード）
 - `vk1C` = 変換キー（日本語キーボード）
-- `F20` / `F21` / `F22` / `F23` = キー加速スクロール（左 / 右 / 下 / 上）
+- `F22` / `F23` = キー加速スクロール（下 / 上）
 
 ## 主要機能
 
@@ -47,16 +47,13 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 | キー | 動作 |
 |------|------|
-| F20  | 左スクロール |
-| F21  | 右スクロール |
 | F22  | 下スクロール |
 | F23  | 上スクロール |
 
 - 単押しは `MIN_NOTCH`（初期値2ノッチ）、長押しは経過時間に応じて増え、約580msで上限に達する
 - 速度は `AccelScroll()` 冒頭の `static` 定数（`REPEAT_DELAY` / `INTERVAL` / `RAMP_STEP` / `MIN_NOTCH` / `MAX_NOTCH`）で調整する
 - 送信は `SendWheel()` が `mouse_event` で生のデルタ値（1ノッチ = 120単位）を送る。`Send "{WheelDown n}"` と違い 1.5 のような小数ノッチを扱えるため
-- 多重起動ガードの `static` は4方向で共有のため、同時に走るスクロールは1方向のみ
-- 横スクロールは `WheelLeft` / `WheelRight` を解釈するアプリでのみ動作する
+- 多重起動ガードの `static` は上下で共有のため、同時に走るスクロールは1方向のみ
 
 ### Illustrator の JSX 連携（apps/Illustrator.ahk）
 
