@@ -18,7 +18,7 @@ lib/
   Functions.ahk            # 共通関数（MyTooltip, IsUrl, CleanUrl, ClickImageAndReturn）
   Hotstring.ahk            # テキスト展開（ddd → 今日の日付MMDD / ttt → tkhs）
   Mouse.ahk                # 中クリックスクロール
-  ScrollKeys.ahk           # F22/F23 によるキー加速スクロール
+  ScrollKeys.ahk           # F23/F24 によるキー加速スクロール
   ToolTipEx.ahk            # ツールチップ描画の拡張
   run_ai_script.ahk        # JSXを別プロセスで実行する子スクリプト
 images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
@@ -28,7 +28,7 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 - `vk1D` = 無変換キー（日本語キーボード）
 - `vk1C` = 変換キー（日本語キーボード）
-- `F22` / `F23` = キー加速スクロール（下 / 上）
+- `F23` / `F24` = キー加速スクロール（下 / 上）
 
 ## 主要機能
 
@@ -47,8 +47,8 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 | キー | 動作 |
 |------|------|
-| F22  | 下スクロール |
-| F23  | 上スクロール |
+| F23  | 下スクロール |
+| F24  | 上スクロール |
 
 - 単押しは `MIN_NOTCH`（初期値2ノッチ）、長押しは経過時間に応じて増え、約580msで上限に達する
 - 速度は `AccelScroll()` 冒頭の `static` 定数（`REPEAT_DELAY` / `INTERVAL` / `RAMP_STEP` / `MIN_NOTCH` / `MAX_NOTCH`）で調整する

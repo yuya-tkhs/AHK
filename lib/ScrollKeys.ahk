@@ -1,6 +1,6 @@
 ;;
 ;; キーによる加速スクロール（ペンタブのスクロール操作を模したもの）
-;;   F22 = 下 / F23 = 上
+;;   F23 = 下 / F24 = 上
 ;;   単押し → MIN_NOTCH ぶんだけ送る（細かい操作用）
 ;;   長押し → 一定時間ごとに1回あたりのノッチ数が増え、MAX_NOTCH で頭打ちになる
 ;;
@@ -8,8 +8,8 @@
 ;; 速度の調整は AccelScroll() 冒頭の static 定数で行う
 ;;;;
 
-F22:: AccelScroll( "F22", "WheelDown" )
-F23:: AccelScroll( "F23", "WheelUp" )
+F23:: AccelScroll( "F23", "WheelDown" )
+F24:: AccelScroll( "F24", "WheelUp" )
 
 AccelScroll( key, dir ) {
     ; --- 調整用パラメータ -------------------------------------------
