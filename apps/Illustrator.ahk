@@ -93,15 +93,20 @@ $~^Space:: {
     (
     2ストローク待機中（5秒）
     - - - - - - - - - - - - - - - -
-    t: テキストプロパティエディタ
-    f: アートボードへ移動
-    g: 位置・サイズ
-    m: アートボード枠を作成
+    アートボード
+    f: 移動
+    a: 追加
     s: 中身を後ろへずらす
-    a: アートボードを追加
-    e: PNG書き出し（10倍）
-    E: PNG書き出し（等倍）
-    2: アートボード名変更
+    m: 枠を作成
+    2: 名前を変更
+    - - - - - - - - - - - - - - - -
+    書き出し
+    e: PNG（10倍）
+    E: PNG（等倍）
+    - - - - - - - - - - - - - - - -
+    オブジェクト
+    t: テキストプロパティエディタ
+    g: 位置・サイズ
     )", 5000)
     ih := InputHook("L1 T5")
     ih.KeyOpt("{Escape}{Space}", "E")
@@ -117,16 +122,19 @@ $~^Space:: {
     }
     switch capturedKey {
         case "Escape": return
-        case "t": RunAiScriptAsync("text_property_editor.jsx")
-        case "g": RunAiScriptAsync("xywh_input.jsx")
-        case "m": RunAiScriptAsync("create_artboard_shape.jsx")
-        case "s": RunAiScriptAsync("shift_artboard_contents.jsx")
+        ; 並び順はツールチップの表示順に合わせている
+        ; アートボード
+        case "f": AiScript("go_to_artboard.jsx")
         case "a": RunAiScriptAsync("add_new_artboard.jsx")
-        ; switchは既定で大文字小文字を区別するため e / E をそのまま分岐できる
+        case "s": RunAiScriptAsync("shift_artboard_contents.jsx")
+        case "m": RunAiScriptAsync("create_artboard_shape.jsx")
+        case "2": AiScript("rename_active_artboard.jsx")
+        ; 書き出し（switchは既定で大文字小文字を区別するため e / E をそのまま分岐できる）
         case "e": RunAiScriptAsync("render_active_artboard_10x.jsx")
         case "E": RunAiScriptAsync("render_active_artboard.jsx")
-        case "f": AiScript("go_to_artboard.jsx")
-        case "2": AiScript("rename_active_artboard.jsx")
+        ; オブジェクト
+        case "t": RunAiScriptAsync("text_property_editor.jsx")
+        case "g": RunAiScriptAsync("xywh_input.jsx")
         default: MyTooltip("無効なキーです", 500)
     }
 }
