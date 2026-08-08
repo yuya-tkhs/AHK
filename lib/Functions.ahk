@@ -38,6 +38,16 @@ CleanUrl(text) {
     return url
 }
 
+; 既に起動していればウィンドウをアクティブにし、無ければ起動する
+;   winTitle … 判定に使うウィンドウ識別子（yuya_allways.ahk の exe_* を渡す）
+;   target   … Run に渡す実行ファイル名／パス
+LaunchOrActivate(winTitle, target) {
+    if WinExist(winTitle)
+        WinActivate                 ; 直前の WinExist で見つかったウィンドウ
+    else
+        Run target
+}
+
 ; variation: 色の許容誤差（0-255）。大きいほど判定がゆるくなる
 ClickImageAndReturn(imgPath, notFoundMsg, variation := 100) {
     if ImageSearch(&imgX, &imgY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*" variation " " imgPath) {

@@ -39,6 +39,34 @@ vk1D & Space:: {
     }
 }
 
+; アプリ起動用の2ストローク（無変換+Space の汎用メニューとは別系統）
+#Space:: {
+    MyTooltip("
+    (
+    アプリ起動 待機中（5秒）
+    - - - - - - - - - - - - - - - -
+    c: Chrome
+    )", 5000)
+    ih := InputHook("L1 T2") ; 次の1文字を待機 (L1: 1文字入力で終了, T2: 2秒でタイムアウト)
+    ih.KeyOpt("{Space}{Escape}{vk1D}", "E")
+    ih.Start()
+    ih.Wait()
+    MyTooltip()
+    if (ih.EndReason = "Timeout") {
+        return
+    }
+    capturedKey := (ih.EndReason = "EndKey") ? ih.EndKey : ih.Input
+    ; 物理キーから指が離れるまで待機（Runと物理キーの衝突を防ぐ）
+    if (capturedKey != "") {
+        KeyWait(StrLower(capturedKey))
+    }
+    switch capturedKey {
+        case "Escape":     return              ; Escが押されたら安全にキャンセル
+        case "c":          LaunchOrActivate(exe_chrome, "chrome.exe")
+        default:           MyTooltip("無効なキーです", 500)
+    }
+}
+
 vk1D:: Send("{vk1D}")
 vk1D & LButton:: Click 2
 vk1D & vk1C::    Send("{vk1C}")
