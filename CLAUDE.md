@@ -41,7 +41,6 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 | 対象 | トリガー | 備考 |
 |------|----------|------|
 | グローバル（Common.ahk） | `vk1D + Space` | メニュー表示5秒／入力待ち2秒 |
-| アプリ起動（Common.ahk） | `Win + Space` | `LaunchOrActivate()` で起動済みなら切り替え |
 | Explorer（Explorer.ahk） | `Ctrl + Space` | ファイルダイアログでも有効（`IsFileDialog()`で判定） |
 | Premiere（Premiere.ahk） | `Ctrl + Space` | ファイルダイアログ中は無効 |
 | Illustrator（Illustrator.ahk） | `Ctrl + Space` | 0.3秒以内の短押しのみ起動。長押しはAiにそのまま渡す |
@@ -112,7 +111,6 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
   - `class_explorer` / `class_desktop` / `class_desktop_alt`（デスクトップは Progman、壁紙スライドショー中は WorkerW）
 - 新しいアプリ固有のホットキーは `apps/` に追加
 - 共通ユーティリティ関数は `lib/Functions.ahk` に追加
-- アプリの起動／切り替えは `LaunchOrActivate(winTitle, target)` を使う（`Win + Space` メニューの追加先）
 - ソースはすべて UTF-8（BOM無し）。新規ファイルにも BOM を付けない
 
 ## 実行方法
