@@ -3,8 +3,6 @@
     (
     2ストローク待機中（5秒）
     - - - - - - - - - - - - - - - -
-    Space: Enter
-    - - - - - - - - - - - - - - - -
     矢印: Window操作
     - - - - - - - - - - - - - - - -
     e: Explorer
@@ -31,7 +29,6 @@
     }
     switch capturedKey {
         case "Escape":     return              ; Escが押されたら安全にキャンセル
-        case "Space":      Send("{Enter}")
         case "Up":         Send("#{Up}")
         case "Down":       Send("#{Down}")
         case "Right":      Send("#{Right}")
