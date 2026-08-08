@@ -1,4 +1,4 @@
-vk1D & Space:: {
+#Space:: {
     MyTooltip("
     (
     2ストローク待機中（5秒）
@@ -49,6 +49,7 @@ vk1D & Space:: {
 }
 
 vk1D:: Send("{vk1D}")
+vk1D & Space::   Send("{Enter}")
 vk1D & LButton:: Click 2
 vk1D & vk1C::    Send("{vk1C}")
 vk1D & Up::      Send("{Blind}{Up 5}")
