@@ -1,9 +1,7 @@
-#Space:: {
+vk1D & Space:: {
     MyTooltip("
     (
     2ストローク待機中（5秒）
-    - - - - - - - - - - - - - - - -
-    矢印: Window操作
     - - - - - - - - - - - - - - - -
     e: Explorer
     s: Screen Short
@@ -15,7 +13,7 @@
     r: Reload
     )", 5000)
     ih := InputHook("L1 T2") ; 次の1文字を待機 (L1: 1文字入力で終了, T2: 2秒でタイムアウト)
-    ih.KeyOpt("{Space}{Escape}{vk1D}{Numpad5}{NumpadEnter}{Up}{Down}{Right}{Left}", "E")
+    ih.KeyOpt("{Space}{Escape}{vk1D}{Numpad5}{NumpadEnter}", "E")
     ih.Start()
     ih.Wait()
     MyTooltip()
@@ -29,10 +27,6 @@
     }
     switch capturedKey {
         case "Escape":     return              ; Escが押されたら安全にキャンセル
-        case "Up":         Send("#{Up}")
-        case "Down":       Send("#{Down}")
-        case "Right":      Send("#{Right}")
-        case "Left":       Send("#{Left}")
         case "e":          Send("#e")
         case "r":          Reload              ; 実行しているスクリプトのReload
         case "s":          Send("#+s")
@@ -46,7 +40,6 @@
 }
 
 vk1D:: Send("{vk1D}")
-vk1D & Space::   Send("{Enter}")
 vk1D & LButton:: Click 2
 vk1D & vk1C::    Send("{vk1C}")
 vk1D & Up::      Send("{Blind}{Up 5}")
