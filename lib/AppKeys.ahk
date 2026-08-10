@@ -3,7 +3,7 @@
 ;;
 ;;   対象                       F19          F20          F21            F22
 ;;   -------------------------- ------------ ------------ -------------- --------------
-;;   Adobe系（Pr/Ai/Ps/Au/Ae/Lr） 下 {Down}   上 {Up}      +{Tab}         {Tab}
+;;   Adobe系（Pr/Ai/Ps/Au/Ae/Lr） +{Tab}      {Tab}        下 {Down}      上 {Up}
 ;;   デスクトップ               表示縮小 ^-  表示拡大 ^+  無効           無効
 ;;   Chrome / エクスプローラー  表示縮小 ^-  表示拡大 ^+  前のタブ ^+Tab 次のタブ ^Tab
 ;;   メモ帳                     表示縮小 ^-  表示拡大 ^+  元に戻す ^z    やり直し ^y
@@ -26,10 +26,10 @@ AppKey( key ) {
     ; Tab / Shift+Tab はどのAdobeアプリでもパネルの表示切り替えで共通
     if IsAdobeApp() {
         switch key {
-            case "F19": Send( "{Down}" )
-            case "F20": Send( "{Up}" )
-            case "F21": Send( "+{Tab}" )
-            case "F22": Send( "{Tab}" )
+            case "F19": Send( "+{Tab}" )
+            case "F20": Send( "{Tab}" )
+            case "F21": Send( "{Down}" )
+            case "F22": Send( "{Up}" )
         }
         return
     }
