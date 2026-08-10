@@ -3,7 +3,7 @@
 ;;
 ;;   対象                       F19          F20          F21            F22
 ;;   -------------------------- ------------ ------------ -------------- --------------
-;;   Lightroom                  下 {Down}    上 {Up}      {Tab}          +{Tab}
+;;   Lightroom                  下 {Down}    上 {Up}      +{Tab}         {Tab}
 ;;   デスクトップ               表示縮小 ^-  表示拡大 ^+  無効           無効
 ;;   Chrome / エクスプローラー  表示縮小 ^-  表示拡大 ^+  前のタブ ^+Tab 次のタブ ^Tab
 ;;   メモ帳                     表示縮小 ^-  表示拡大 ^+  元に戻す ^z    やり直し ^y
@@ -27,8 +27,8 @@ AppKey( key ) {
         switch key {
             case "F19": Send( "{Down}" )
             case "F20": Send( "{Up}" )
-            case "F21": Send( "{Tab}" )
-            case "F22": Send( "+{Tab}" )
+            case "F21": Send( "+{Tab}" )
+            case "F22": Send( "{Tab}" )
         }
         return
     }
