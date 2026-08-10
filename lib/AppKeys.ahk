@@ -3,7 +3,7 @@
 ;;
 ;;   対象                       F19          F20          F21            F22
 ;;   -------------------------- ------------ ------------ -------------- --------------
-;;   Lightroom                  下 {Down}    上 {Up}      +{Tab}         {Tab}
+;;   Adobe系（Pr/Ai/Ps/Au/Ae/Lr） 下 {Down}   上 {Up}      +{Tab}         {Tab}
 ;;   デスクトップ               表示縮小 ^-  表示拡大 ^+  無効           無効
 ;;   Chrome / エクスプローラー  表示縮小 ^-  表示拡大 ^+  前のタブ ^+Tab 次のタブ ^Tab
 ;;   メモ帳                     表示縮小 ^-  表示拡大 ^+  元に戻す ^z    やり直し ^y
@@ -22,8 +22,9 @@ $F21:: AppKey( "F21" )
 $F22:: AppKey( "F22" )
 
 AppKey( key ) {
-    ; Lightroom：4キーすべて専用の割り当て
-    if WinActive( exe_lr ) {
+    ; Adobe系：4キーすべて専用の割り当て
+    ; Tab / Shift+Tab はどのAdobeアプリでもパネルの表示切り替えで共通
+    if IsAdobeApp() {
         switch key {
             case "F19": Send( "{Down}" )
             case "F20": Send( "{Up}" )
@@ -60,6 +61,16 @@ AppKey( key ) {
     }
     ; デフォルト：元に戻す／やり直し
     Send( key = "F21" ? "^z" : "^+z" )
+}
+
+; Adobe系アプリが前面かどうかを判定する
+IsAdobeApp() {
+    return WinActive( exe_pr )
+        || WinActive( exe_ai )
+        || WinActive( exe_ps )
+        || WinActive( exe_au )
+        || WinActive( exe_ae )
+        || WinActive( exe_lr )
 }
 
 ; デスクトップが前面かどうかを判定する。
