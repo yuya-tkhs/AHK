@@ -16,6 +16,9 @@ global exe_ai := "ahk_exe Illustrator.exe"
 global exe_ps := "ahk_exe Photoshop.exe"
 global exe_au := "ahk_exe Adobe Audition.exe"
 global exe_ae := "ahk_exe AfterFX.exe"
+; Lightroom Classic。SetTitleMatchMode(2) の部分一致により
+; 「Adobe Lightroom.exe」（CC版）も同じ識別子で拾える
+global exe_lr := "ahk_exe Lightroom.exe"
 global exe_bl := "ahk_exe blender.exe"
 global exe_pureref := "ahk_exe PureRef.exe"
 global exe_chrome := "ahk_exe chrome.exe"

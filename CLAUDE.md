@@ -19,7 +19,7 @@ lib/
   Hotstring.ahk            # テキスト展開（ddd → 今日の日付MMDD / ttt → tkhs）
   Mouse.ahk                # 中クリックスクロール
   ScrollKeys.ahk           # F23/F24 によるキー加速スクロール
-  AppKeys.ahk              # F21/F22 のアプリ別割り当て（元に戻す／タブ切り替え）
+  AppKeys.ahk              # F19〜F22 のアプリ別割り当て（表示倍率／元に戻す／タブ切り替え）
   ToolTipEx.ahk            # ツールチップ描画の拡張
   run_ai_script.ahk        # JSXを別プロセスで実行する子スクリプト
 images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
@@ -29,6 +29,7 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 - `vk1D` = 無変換キー（日本語キーボード）
 - `vk1C` = 変換キー（日本語キーボード）
+- `F19` / `F20` = アプリ別割り当て（表示の縮小・拡大）
 - `F21` / `F22` = アプリ別割り当て（元に戻す・やり直し／タブ切り替え）
 - `F23` / `F24` = キー加速スクロール（下 / 上）
 
@@ -45,18 +46,20 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 | Premiere（Premiere.ahk） | `Ctrl + Space` | ファイルダイアログ中は無効 |
 | Illustrator（Illustrator.ahk） | `Ctrl + Space` | 0.3秒以内の短押しのみ起動。長押しはAiにそのまま渡す |
 
-### F21/F22 のアプリ別割り当て（lib/AppKeys.ahk）
+### F19〜F22 のアプリ別割り当て（lib/AppKeys.ahk）
 
 上から順に判定し、最初に一致したものが使われる。
 
-| 対象 | F21 | F22 |
-|------|-----|-----|
-| デスクトップ | 無効 | 無効 |
-| Chrome / エクスプローラー | 前のタブ `^+Tab` | 次のタブ `^Tab` |
-| メモ帳 | 元に戻す `^z` | やり直し `^y` |
-| デフォルト | 元に戻す `^z` | やり直し `^+z` |
+| 対象 | F19 | F20 | F21 | F22 |
+|------|-----|-----|-----|-----|
+| Lightroom | 下 `{Down}` | 上 `{Up}` | `{Tab}` | `+{Tab}` |
+| デスクトップ | 縮小 `^-` | 拡大 `^+` | 無効 | 無効 |
+| Chrome / エクスプローラー | 縮小 `^-` | 拡大 `^+` | 前のタブ `^+Tab` | 次のタブ `^Tab` |
+| メモ帳 | 縮小 `^-` | 拡大 `^+` | 元に戻す `^z` | やり直し `^y` |
+| デフォルト | 縮小 `^-` | 拡大 `^+` | 元に戻す `^z` | やり直し `^+z` |
 
-- デスクトップを無効にしているのは、`^z` がファイル操作（移動・削除・リネーム）の巻き戻しになり誤操作の影響が大きいため
+- F19/F20 は Lightroom 以外では共通（表示倍率）。`^+` は Ctrl+Shift と解釈されるため、Send では `^{+}` と `+` を波括弧で囲む
+- デスクトップで F21/F22 を無効にしているのは、`^z` がファイル操作（移動・削除・リネーム）の巻き戻しになり誤操作の影響が大きいため。F19/F20 は無害なのでデフォルトのまま
 - `#HotIf` を並べず `AppKey()` の中で分岐する。「デフォルト＋例外」の優先順位が一目で分かるため（`AdobeCommon.ahk` の `OnCtrlEnterPost()` と同じ方針）
 
 ### キー加速スクロール（lib/ScrollKeys.ahk）
@@ -106,7 +109,7 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 - AutoHotkey v2.0 構文を使用（v1.xとは非互換）
 - ウィンドウ判定は `#HotIf WinActive(...)` で行い、ブロック終端は `#HotIf` で閉じる
 - ウィンドウ識別子は yuya_allways.ahk でグローバル変数として定義
-  - `exe_pr` / `exe_ai` / `exe_ps` / `exe_au` / `exe_ae` / `exe_bl` / `exe_pureref`
+  - `exe_pr` / `exe_ai` / `exe_ps` / `exe_au` / `exe_ae` / `exe_lr` / `exe_bl` / `exe_pureref`
   - `exe_chrome` / `exe_notepad`
   - `class_explorer` / `class_desktop` / `class_desktop_alt`（デスクトップは Progman、壁紙スライドショー中は WorkerW）
 - 新しいアプリ固有のホットキーは `apps/` に追加
