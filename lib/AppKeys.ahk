@@ -5,7 +5,7 @@
 ;;   -------------------------- ------------ ------------ -------------- --------------
 ;;   Adobe系（Pr/Ai/Ps/Au/Ae/Lr） 下 {Down}   上 {Up}      +{Tab}         {Tab}
 ;;   デスクトップ               表示縮小 ^-  表示拡大 ^+  無効           無効
-;;   文字入力中／メモ帳/VSCode  表示縮小 ^-  表示拡大 ^+  元に戻す ^z    やり直し ^+z
+;;   日本語入力中／メモ帳/VSCode 表示縮小 ^- 表示拡大 ^+  元に戻す ^z    やり直し ^+z
 ;;   　└ メモ帳                表示縮小 ^-  表示拡大 ^+  元に戻す ^z    やり直し ^y
 ;;   Chrome / エクスプローラー  表示縮小 ^-  表示拡大 ^+  前のタブ ^+Tab 次のタブ ^Tab
 ;;   デフォルト                 表示縮小 ^-  表示拡大 ^+  +{Tab}         {Tab}
@@ -13,37 +13,6 @@
 ;; #HotIf を並べず1か所で分岐しているのは、AdobeCommon.ahk の OnCtrlEnterPost() と同じ理由。
 ;; 「デフォルト＋例外」という優先順位がコード上で一目で分かるため。
 ;;;;
-
-; --- 「文字を入力中」の検出用 ---------------------------------------
-; 最後に印字可能文字が入力された時刻。InputHook の OnChar で更新する。
-global _lastTypedTick := 0
-
-; "V"（Visible）を付けているので打鍵はアプリにそのまま流れる。付けないと入力を飲み込む。
-global _typingWatcher := InputHook("V")
-_typingWatcher.OnChar := OnTypedChar
-_typingWatcher.Start()
-
-; InputHook は拾った文字を内部バッファに溜め続けるため、定期的に作り直して捨てる。
-; 使うのは「時刻」だけで、打った内容を保持する必要はない。
-SetTimer(ResetTypingWatcher, 300000)   ; 5分ごと
-
-OnTypedChar( ih, char ) {
-    global _lastTypedTick
-    ; 印字可能文字だけを「入力」とみなす。
-    ; Ctrl+A などの修飾キー組み合わせは制御文字(0x01等)として届くため、
-    ; ここで弾かないとコピー直後などに誤って取り消しが走る（実測で確認済み）。
-    if ( Ord( char ) >= 0x20 )
-        _lastTypedTick := A_TickCount
-}
-
-ResetTypingWatcher() {
-    global _typingWatcher
-    try {
-        _typingWatcher.Stop()
-        _typingWatcher.Start()
-    }
-}
-; -------------------------------------------------------------------
 
 ; $ を付けてキーボードフック経由にする。
 ; 付けないと環境によっては F19〜F22 自体がアプリに届いてしまい、
@@ -81,8 +50,8 @@ AppKey( key ) {
     if IsDesktop() {
         return
     }
-    ; 文字を入力しているとき、またはテキスト編集用アプリ：元に戻す／やり直し
-    if ( IsTextEditApp() || IsTextEditing() ) {
+    ; 日本語入力中、またはテキスト編集用アプリ：元に戻す／やり直し
+    if ( IsTextEditApp() || IsImeOn() ) {
         SendUndoRedo( key )
         return
     }
@@ -103,28 +72,25 @@ SendUndoRedo( key ) {
         Send( key = "F21" ? "^z" : "^+z" )
 }
 
-; いま文字を入力している最中か判定する。
-; ウィンドウの中身を覗く方式（CaretGetPos）は Chrome / VSCode などの Electron 系で
-; 入力欄にいても false を返すため使えない（実測で確認済み）。
-; 代わりに「アプリの外から見える2つの状態」で判断する。どちらも Electron でも取れる。
-IsTextEditing() {
-    static TYPING_WINDOW := 4000   ; 最後の打鍵から何ms以内を「入力中」とみなすか
-    if IsImeOn()                   ; 日本語入力ON＝長文を書いている最中とみなす
-        return true
-    return _lastTypedTick && ( A_TickCount - _lastTypedTick < TYPING_WINDOW )
-}
-
-; 日本語入力（IME）がONかどうか。Chrome / VSCode でも取得できることを実測で確認済み。
+; 日本語入力（IME）がONかどうか＝長文を書いている最中かの判断に使う。
+; Chrome / VSCode などの Electron 系でも取得できることを実測で確認済み。
+; （CaretGetPos によるキャレット判定は Chrome がアドレスバーでも false を返すため使えない）
+;
+; 生の DllCall("SendMessage") は相手アプリが応答するまで戻らず、重いアプリでは
+; キーの反応が遅れる。AHK の SendMessage() は内部で SendMessageTimeout を使うため、
+; 短いタイムアウトを指定して「応答が無ければ即座に諦める」ようにしている。
 IsImeOn() {
-    static WM_IME_CONTROL := 0x283, IMC_GETOPENSTATUS := 0x0005
+    static WM_IME_CONTROL := 0x283, IMC_GETOPENSTATUS := 0x0005, TIMEOUT := 80
     hWnd := WinExist( "A" )
     if !hWnd
         return false
     hIME := DllCall( "imm32\ImmGetDefaultIMEWnd", "Ptr", hWnd, "Ptr" )
     if !hIME
         return false
-    return DllCall( "SendMessage", "Ptr", hIME, "UInt", WM_IME_CONTROL
-        , "Ptr", IMC_GETOPENSTATUS, "Ptr", 0, "Ptr" ) != 0
+    try
+        return SendMessage( WM_IME_CONTROL, IMC_GETOPENSTATUS, 0, , "ahk_id " hIME, , , , TIMEOUT ) != 0
+    catch
+        return false   ; タイムアウト時は「入力中でない」側に倒してキーを待たせない
 }
 
 ; 常に元に戻す／やり直しを割り当てるアプリ（テキスト編集が主目的のもの）。
