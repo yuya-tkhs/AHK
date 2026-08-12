@@ -39,13 +39,6 @@ CheckIllustrator() {
     verifiedPid := newPid
 }
 
-; 同期実行。JSXが終わるまで本体が固まりホットキーが全部止まるため、現在の呼び出し元は無い。
-; ダイアログを出さず一瞬で終わるJSXを足すとき以外は RunAiScriptAsync を使う。
-AiScript(name) {
-    static base := "W:\共有ドライブ\wc動画\sync\Assets\adobe-scripts_tkhs\illustrator\"
-    ComObjActive("Illustrator.Application").DoJavaScriptFile(base name)
-}
-
 ; jsxを別AHKプロセスで非同期起動する。
 ; DoJavaScriptFileのブロックを子プロセスに肩代わりさせ、本体をフリーズさせない。
 global _aiChildPid := 0
@@ -109,7 +102,9 @@ RunAiScriptWithTooltip(name, timeoutMs := 600000) {
     }
     try FileDelete(_aiResultFile)       ; 前回の残骸を消してから起動する
     pid := RunAiScriptAsync(name)
-    if (!pid)                           ; 念のため（ここに来るのはRunに失敗したときだけ）
+    ; Run は失敗すると例外を投げるので、0が返るのは割り込みで内側のガードに
+    ; 掛かった場合だけ。その場合は警告済みなので黙って抜ける。
+    if (!pid)
         return
     _aiResultPid := pid
     _aiResultDeadline := A_TickCount + timeoutMs
@@ -137,43 +132,6 @@ AiResultPoll() {
     }
     if (A_TickCount > _aiResultDeadline)
         SetTimer(AiResultPoll, 0)
-}
-
-; 「見せるだけ」のダイアログを、出た時点でこちらから閉じる。
-; 自作JSXは結果ファイル方式（RunAiScriptWithTooltip）へ移行済みのため現在の呼び出し元は無い。
-; ソースを書き換えられないサードパーティ製JSX（3flab-* / sttk3-* など）を
-; AHKから起動するようになったときのために残してある。
-; 書き出しのように時間がかかる処理では、待ちきれずに早めに押したEnterは
-; ダイアログがまだ無いためIllustrator本体に吸われて消える。結局もう一度
-; 押し直すことになり一拍待たされるので、そもそも押さなくて済むようにする。
-; 消える内容はツールチップに移すため、ファイル名・保存先は失われない。
-; WinWaitはスレッドを占有するので使わず、SetTimerでポーリングする。
-global _autoCloseTitle := ""
-global _autoCloseDeadline := 0
-AutoCloseDialog(title, timeoutMs := 600000) {
-    global _autoCloseTitle, _autoCloseDeadline
-    _autoCloseTitle := title
-    _autoCloseDeadline := A_TickCount + timeoutMs
-    SetTimer(AutoClosePoll, 200)
-}
-AutoClosePoll() {
-    global _autoCloseTitle, _autoCloseDeadline
-    if !WinExist(_autoCloseTitle) {
-        if (A_TickCount > _autoCloseDeadline)   ; 出ないまま時間切れ（JSXが失敗した等）
-            SetTimer(AutoClosePoll, 0)
-        return
-    }
-    SetTimer(AutoClosePoll, 0)
-    ; 閉じる前に中身を控える。ただしScriptUI（JSXのWindow）は標準のWin32コントロールを
-    ; 使わないため空が返る（実測確認済み）。その場合はタイトルだけツールチップに出す。
-    body := WinGetText(_autoCloseTitle)
-    WinActivate(_autoCloseTitle)
-    Sleep(80)                                   ; フォーカスが移るのを待つ
-    Send("{Enter}")                             ; ScriptUIのOKボタンは素のEnterで反応する
-    Sleep(120)
-    if WinExist(_autoCloseTitle)                ; Enterで閉じなければ強制的に閉じる
-        WinClose(_autoCloseTitle)
-    MyTooltip(body != "" ? body : _autoCloseTitle, 2500)
 }
 
 #HotIf WinActive(exe_ai)
