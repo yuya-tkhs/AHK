@@ -100,7 +100,9 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 - `AiScript()` は COM 経由で同期実行（本体がブロックされる）。JSXが終わるまでホットキーが全部止まるため現在の呼び出し元は無い。JSXの起動はすべて `RunAiScriptAsync()` に寄せてある
 - `RunAiScriptAsync()` は `lib/run_ai_script.ahk` を別プロセスで起動し、ダイアログ表示中も本体をフリーズさせない
-- `AutoCloseDialog()` は「見せるだけ」のダイアログ（`書き出し完了`）が出た時点で自動的に閉じる。書き出し中に待ちきれず押したEnterは、ダイアログがまだ無いためIllustrator本体に吸われて消え、結局押し直しになるため。`WinWait` はスレッドを占有するので使わず `SetTimer` でポーリングする
+- `RunAiScriptWithTooltip()` は完了通知をダイアログではなく `%TEMP%\ai_jsx_result.txt` 経由で受け取り `MyTooltip()` に出す。JSX側は `.tmp` に書いてから rename するので書きかけを読むことはない。**エンコーディングは JSX 側 `File.encoding`・AHK 側 `FileRead` とも `UTF-8` を明示する**（ExtendScript の既定は日本語Windowsでは Shift-JIS で、日本語のパスが化ける）。監視の停止条件は ①結果ファイル発見 ②子プロセス消滅＋猶予2回 ③絶対タイムアウト600秒 の3つ。②があるのでキャンセルやエラーで結果が書かれなくても確実に止まる
+- ダイアログを出さない方式にしたのは、書き出しに時間がかかる間に待ちきれず押したEnterが、ダイアログがまだ無いためIllustrator本体に吸われて消え、結局押し直しになっていたため。確定操作そのものを不要にした
+- `AutoCloseDialog()` は「見せるだけ」のダイアログが出た時点で自動的に閉じる。自作JSXは上記の結果ファイル方式へ移行したため**現在の呼び出し元は無い**が、ソースを書き換えられないサードパーティ製JSX用に残してある。`WinWait` はスレッドを占有するので使わず `SetTimer` でポーリングする
 - ScriptUI（JSXの `new Window`）は標準のWin32コントロールを使わないため、**`WinGetText()` では中身が取れない**（実測確認済み・空が返る）。ダイアログ内のファイル名や保存先をAHK側で読むことはできないので、必要ならJSXにパスをファイル出力させてそれを読む
 - ScriptUIのダイアログは `WinActivate` してから `Send("{Enter}")` で閉じられる（OKボタンが反応する）。効かない場合に備えて `WinClose` へフォールバックしている
 - Sppy_1_5 は10秒ごとに判定するが、実行パスを確認できたPIDが生きている間は `ProcessExist(pid)` だけで抜ける。WMIクエリ（`Win32_Process`）は実測125〜141msかかり、その間AHK全体が止まるため、毎回叩くとIllustrator起動中は10秒ごとに固まる

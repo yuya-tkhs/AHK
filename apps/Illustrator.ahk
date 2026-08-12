@@ -114,6 +114,9 @@ AiResultPoll() {
 }
 
 ; 「見せるだけ」のダイアログを、出た時点でこちらから閉じる。
+; 自作JSXは結果ファイル方式（RunAiScriptWithTooltip）へ移行済みのため現在の呼び出し元は無い。
+; ソースを書き換えられないサードパーティ製JSX（3flab-* / sttk3-* など）を
+; AHKから起動するようになったときのために残してある。
 ; 書き出しのように時間がかかる処理では、待ちきれずに早めに押したEnterは
 ; ダイアログがまだ無いためIllustrator本体に吸われて消える。結局もう一度
 ; 押し直すことになり一拍待たされるので、そもそも押さなくて済むようにする。
@@ -223,12 +226,9 @@ $~^Space:: {
         case "m": RunAiScriptAsync("create_artboard_shape.jsx")
         case "2": RunAiScriptAsync("rename_active_artboard.jsx")
         ; 書き出し（switchは既定で大文字小文字を区別するため e / E をそのまま分岐できる）
-        ; e はJSXがダイアログを出さず結果ファイルを書く方式。E は旧方式（自動クローズ）のまま。
-        ; 移行中の比較用に両方を残してある。
+        ; どちらもJSXはダイアログを出さず結果ファイルを書き、それをツールチップに出す
         case "e": RunAiScriptWithTooltip("render_active_artboard_10x.jsx")
-        case "E":
-            RunAiScriptAsync("render_active_artboard.jsx")
-            AutoCloseDialog("書き出し完了")
+        case "E": RunAiScriptWithTooltip("render_active_artboard.jsx")
         ; オブジェクト
         case "t": RunAiScriptAsync("text_property_editor.jsx")
         case "g": RunAiScriptAsync("xywh_input.jsx")
