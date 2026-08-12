@@ -44,7 +44,25 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 | グローバル（Common.ahk） | `vk1D + Space` | メニュー表示5秒／入力待ち2秒 |
 | Explorer（Explorer.ahk） | `Ctrl + Space` | ファイルダイアログでも有効（`IsFileDialog()`で判定） |
 | Premiere（Premiere.ahk） | `Ctrl + Space` | ファイルダイアログ中は無効 |
-| Illustrator（Illustrator.ahk） | `Ctrl + Space` | 0.3秒以内の短押しのみ起動。長押しはAiにそのまま渡す |
+| Illustrator（Illustrator.ahk） | `Ctrl + Space` | 0.3秒以内の短押しのみ起動。長押しはAiにそのまま渡す。**3ストローク対応**（下記） |
+
+#### Illustrator の3ストローク
+
+メニューは `AiMenu`（apps/Illustrator.ahk 冒頭の配列）1か所で定義し、ツールチップの文言とキーの分岐を両方そこから生成する。追加・変更はこの配列だけを直す。
+
+| 第2打鍵 | 内容 |
+|---------|------|
+| `b` | アートボード（移動 `f` / 追加 `a` / 中身を後ろへずらす `s` / 枠を作成 `m` / 名前変更 `2`） |
+| `x` | 書き出し（`e` 10倍 / `E` 等倍） |
+| `o` | オブジェクト（`t` テキストプロパティ / `g` 位置・サイズ） |
+| `a` | 整列（`←→↑↓` 各方向 / `c` 水平中央 / `m` 垂直中央） |
+| `j` | 文字揃え（`←` 左 / `→` 右 / `↑` 中央） |
+| `e` `E` `t` `g` | 直接起動（`direct: true` の項目は第2打鍵だけで動く） |
+
+- サブメニューは `Backspace` で第1階層へ戻る。`Escape` は全キャンセル
+- `direct: true` を付けると第1階層のメニューにも並び、第2打鍵だけで起動できる。頻用になった項目はこれで「昇格」させる
+- **矢印のように文字にならないキーは `InputHook` の `EndKey` にしないと拾えない。** `BuildAiEndKeys()` が項目キーの文字数（2文字以上＝特殊キー）から自動で組み立てる
+- `ReadAiMenuKey()` は**ツールチップを描く前にフックを張る**。`Wait()` が返ってから次の `Start()` までの隙間に押されたキーはIllustratorへ素通りし、単キーがツール切替に化けるため
 
 ### F19〜F22 のアプリ別割り当て（lib/AppKeys.ahk）
 
@@ -98,6 +116,7 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 ### Illustrator の JSX 連携（apps/Illustrator.ahk）
 
+- `RunAiMenuCommand()` は **JSXが存在しないIllustratorのメニューコマンド**（整列など）を実行する。`lib/run_ai_script.ahk` に `--code` を渡し、子プロセスが `DoJavaScript`（文字列実行）で `app.executeMenuCommand('...')` を叩く。共有ドライブにJSXファイルを作らずに済ませるため。コマンド名は Sppy の `HotkeySet.txt` の `<AIMENU>` 行と同じものが使える。**JS側の引用符はシングルにする**（コマンドラインの二重引用符と衝突するため）
 - JSXの起動はすべて `RunAiScriptAsync()` を通す。`lib/run_ai_script.ahk` を別プロセスで起動するので、ダイアログ表示中も本体がフリーズしない。COMで同期実行する版（`AiScript()`）はJSXが終わるまでホットキーが全部止まるため廃止した（追加コストは実測約30msしかなく、同期版を選ぶ理由がない）
 - `RunAiScriptWithTooltip()` は完了通知をダイアログではなく `%TEMP%\ai_jsx_result.txt` 経由で受け取り `MyTooltip()` に出す。JSX側は `.tmp` に書いてから rename するので書きかけを読むことはない。**エンコーディングは JSX 側 `File.encoding`・AHK 側 `FileRead` とも `UTF-8` を明示する**（ExtendScript の既定は日本語Windowsでは Shift-JIS で、日本語のパスが化ける）。監視の停止条件は ①結果ファイル発見 ②子プロセス消滅＋猶予2回 ③絶対タイムアウト600秒 の3つ。②があるのでキャンセルやエラーで結果が書かれなくても確実に止まる
 - ダイアログを出さない方式にしたのは、書き出しに時間がかかる間に待ちきれず押したEnterが、ダイアログがまだ無いためIllustrator本体に吸われて消え、結局押し直しになっていたため。確定操作そのものを不要にした
