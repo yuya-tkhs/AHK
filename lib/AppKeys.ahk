@@ -5,9 +5,10 @@
 ;;   -------------------------- ------------ ------------ -------------- --------------
 ;;   Adobe系（Pr/Ai/Ps/Au/Ae/Lr） 下 {Down}   上 {Up}      +{Tab}         {Tab}
 ;;   デスクトップ               表示縮小 ^-  表示拡大 ^+  無効           無効
-;;   日本語入力中／メモ帳/VSCode 表示縮小 ^- 表示拡大 ^+  元に戻す ^z    やり直し ^+z
+;;   日本語入力中               表示縮小 ^-  表示拡大 ^+  元に戻す ^z    やり直し ^+z
 ;;   　└ メモ帳                表示縮小 ^-  表示拡大 ^+  元に戻す ^z    やり直し ^y
 ;;   Chrome / エクスプローラー  表示縮小 ^-  表示拡大 ^+  前のタブ ^+Tab 次のタブ ^Tab
+;;   / VSCode
 ;;   デフォルト                 表示縮小 ^-  表示拡大 ^+  +{Tab}         {Tab}
 ;;
 ;; #HotIf を並べず1か所で分岐しているのは、AdobeCommon.ahk の OnCtrlEnterPost() と同じ理由。
@@ -97,7 +98,6 @@ IsImeOn() {
 ; 入力していない間も取り消しを効かせたいアプリはここに1行足す。
 IsTextEditApp() {
     return WinActive( exe_notepad )
-        || WinActive( exe_code )
 }
 
 ; Adobe系アプリが前面かどうかを判定する
@@ -117,8 +117,11 @@ IsDesktop() {
         || WinActive( class_desktop_alt )
 }
 
-; Ctrl+Tab でタブを切り替えられるアプリが前面かどうかを判定する
+; Ctrl+Tab でタブを切り替えられるアプリが前面かどうかを判定する。
+; VSCode はここに入れる。外すとデフォルトの素の {Tab} が送られ、
+; エディタにインデントが挿入されてしまうため。
 IsTabSwitchApp() {
     return WinActive( exe_chrome )
         || WinActive( class_explorer )
+        || WinActive( exe_code )
 }
