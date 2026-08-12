@@ -44,7 +44,8 @@ IsWideChar(code) {
         || (code >= 0xFFE0 && code <= 0xFFE6)    ; 全角記号
 }
 
-; 取り残された同一スクリプトの常駐を終了する（戻り値：終了した数）。
+; 取り残された同一スクリプトの常駐を終了する。
+; 戻り値: {killed: 終了できた数, survived: 終了できなかった数}
 ; #SingleInstance Force は旧インスタンスの置き換えに失敗することがあり、
 ; 失敗すると同じスクリプトが二重に常駐したままになる。
 ; この状態では「~」付き（非抑制）のホットキーが両方のインスタンスで発火するため
@@ -57,19 +58,26 @@ IsWideChar(code) {
 KillDuplicateInstances() {
     prevDetect := A_DetectHiddenWindows
     DetectHiddenWindows true
-    killed := 0
+    killed := 0, survived := 0
     for hwnd in WinGetList("ahk_class AutoHotkey") {
         if (hwnd = A_ScriptHwnd)        ; 自分自身は対象外
             continue
         try {
-            if (SubStr(WinGetTitle(hwnd), 1, StrLen(A_ScriptFullPath)) = A_ScriptFullPath) {
-                ProcessClose(WinGetPID(hwnd))
+            if (SubStr(WinGetTitle(hwnd), 1, StrLen(A_ScriptFullPath)) != A_ScriptFullPath)
+                continue
+            pid := WinGetPID(hwnd)
+            ProcessClose(pid)
+            ; 落とせたか必ず確認する。権限が食い違うと ProcessClose は失敗しうるが、
+            ; 黙って見逃すと二重常駐に気づけないまま同じ症状に戻るため。
+            ProcessWaitClose(pid, 2)
+            if ProcessExist(pid)
+                survived++
+            else
                 killed++
-            }
         }
     }
     DetectHiddenWindows prevDetect
-    return killed
+    return { killed: killed, survived: survived }
 }
 
 ; クリップボードの中身がURLらしいか判定する
