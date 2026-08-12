@@ -1,9 +1,47 @@
 ; duration はミリ秒（ToolTipEx の TimeOut は秒のため変換）
-MyTooltip(text := "", duration := 300) {
+; wrapWidth を超える行は WrapText() で折り返す。ネイティブのツールチップは
+; 改行文字でしか折れないため、長いパスなどを出すと横に伸び続けるので。
+; 既定の60は2ストロークのメニュー（最長31）が折れない値にしてある。
+MyTooltip(text := "", duration := 300, wrapWidth := 60) {
     if (text = "")
         ToolTipEx()
     else
-        ToolTipEx(text, duration / 1000)
+        ToolTipEx(WrapText(text, wrapWidth), duration / 1000)
+}
+
+; 全角を2・半角を1として数え、width を超えたところで改行を入れる。
+; 単純に文字数で切ると日本語と英数が混ざったとき見た目の幅がそろわないため。
+; 既存の改行は保持し、width に収まる行はそのまま返す。
+; 単語やパスの区切りは見ずに折るが、対象がパスやURL（空白を含まない）なので実害はない。
+WrapText(text, width := 60) {
+    if (width <= 0)
+        return text
+    out := ""
+    for i, line in StrSplit(text, "`n", "`r") {
+        if (i > 1)
+            out .= "`n"
+        w := 0
+        Loop Parse line {
+            cw := IsWideChar(Ord(A_LoopField)) ? 2 : 1
+            if (w + cw > width) {
+                out .= "`n"
+                w := 0
+            }
+            out .= A_LoopField
+            w += cw
+        }
+    }
+    return out
+}
+
+; 表示幅が2になる文字か（East Asian Wide / Fullwidth のうち実際に使う範囲）
+IsWideChar(code) {
+    return (code >= 0x1100 && code <= 0x115F)    ; ハングル字母
+        || (code >= 0x2E80 && code <= 0xA4CF)    ; CJK・かな・約物
+        || (code >= 0xAC00 && code <= 0xD7A3)    ; ハングル音節
+        || (code >= 0xF900 && code <= 0xFAFF)    ; CJK互換漢字
+        || (code >= 0xFF00 && code <= 0xFF60)    ; 全角英数・記号
+        || (code >= 0xFFE0 && code <= 0xFFE6)    ; 全角記号
 }
 
 ; クリップボードの中身がURLらしいか判定する

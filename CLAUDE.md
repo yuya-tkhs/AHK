@@ -15,7 +15,7 @@ apps/
   Illustrator.ahk          # Illustrator ホットキー・Sppy_1_5 常駐監視・JSX連携
   AdobeCommon.ahk          # Adobe共通の Ctrl+Enter 後処理をアプリ別に振り分け
 lib/
-  Functions.ahk            # 共通関数（MyTooltip, IsUrl, CleanUrl, ClickImageAndReturn）
+  Functions.ahk            # 共通関数（MyTooltip, WrapText, IsUrl, CleanUrl, ClickImageAndReturn）
   Hotstring.ahk            # テキスト展開（ddd → 今日の日付MMDD / ttt → tkhs）
   Mouse.ahk                # 中クリックスクロール
   ScrollKeys.ahk           # F23/F24 によるキー加速スクロール
@@ -125,6 +125,7 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 - `ResetStuckKeys()` … 1500ms間隔で修飾キーのスタック（論理ON・物理OFF）を検出して自動解除
 - `OnClipboardChange` … コピーされたテキストがURLなら `CleanUrl()` で自動整形
+- `MyTooltip()` は既定で60幅を超える行を `WrapText()` で折り返す。ネイティブのツールチップ（`tooltips_class32`）は**改行文字でしか折れず自動折り返しが無い**ため、長いパスやURLを出すと横に伸び続ける。全角を2・半角を1として数えるので日本語と英数が混ざっても見た目の幅がそろう。既定値60は2ストロークのメニュー（最長31）が折れない値
 - `~Esc` … 400ms以内にEscを2回押すと `{vk1D}`（無変換＝半角英数）を送る。`~` 付きなのでEsc自体は各アプリに素通しされる。2ストローク待機中はInputHookがEscを横取りするため発火せず、キャンセル動作が優先される
 
 ### startup_manager の動作
