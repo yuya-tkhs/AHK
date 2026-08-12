@@ -5,8 +5,9 @@
 ;;   -------------------------- ------------ ------------ -------------- --------------
 ;;   Adobe系（Pr/Ai/Ps/Au/Ae/Lr） 下 {Down}   上 {Up}      +{Tab}         {Tab}
 ;;   デスクトップ               表示縮小 ^-  表示拡大 ^+  無効           無効
+;;   テキスト編集（VSCode等）   表示縮小 ^-  表示拡大 ^+  元に戻す ^z    やり直し ^+z
+;;   　└ メモ帳                表示縮小 ^-  表示拡大 ^+  元に戻す ^z    やり直し ^y
 ;;   Chrome / エクスプローラー  表示縮小 ^-  表示拡大 ^+  前のタブ ^+Tab 次のタブ ^Tab
-;;   メモ帳                     表示縮小 ^-  表示拡大 ^+  元に戻す ^z    やり直し ^y
 ;;   デフォルト                 表示縮小 ^-  表示拡大 ^+  +{Tab}         {Tab}
 ;;
 ;; #HotIf を並べず1か所で分岐しているのは、AdobeCommon.ahk の OnCtrlEnterPost() と同じ理由。
@@ -49,14 +50,18 @@ AppKey( key ) {
     if IsDesktop() {
         return
     }
+    ; テキスト編集アプリ：元に戻す／やり直し
+    ; メモ帳だけ ^+z が効かないため、やり直しは ^y を送る
+    if IsTextEditApp() {
+        if WinActive( exe_notepad )
+            Send( key = "F21" ? "^z" : "^y" )
+        else
+            Send( key = "F21" ? "^z" : "^+z" )
+        return
+    }
     ; タブを持つアプリ：タブ切り替え
     if IsTabSwitchApp() {
         Send( key = "F21" ? "^+{Tab}" : "^{Tab}" )
-        return
-    }
-    ; メモ帳：やり直しが ^+z ではなく ^y
-    if WinActive( exe_notepad ) {
-        Send( key = "F21" ? "^z" : "^y" )
         return
     }
     ; デフォルト：素の Tab / Shift+Tab（フォーカス移動・パネル送り）
@@ -78,6 +83,16 @@ IsAdobeApp() {
 IsDesktop() {
     return WinActive( class_desktop )
         || WinActive( class_desktop_alt )
+}
+
+; 元に戻す／やり直しを割り当てるアプリ（テキスト編集が主目的のアプリ）が前面か判定する。
+; キャレットの有無による自動判定は採用していない。CaretGetPos() は Win32 では効くが
+; Chrome / VSCode などの Electron 系では入力欄にいても false を返す（実測済み）。
+; 効くアプリと効かないアプリが混在すると挙動の境界が見えなくなるため、明示リストにしている。
+; 対象を増やすときはここに1行足す。
+IsTextEditApp() {
+    return WinActive( exe_notepad )
+        || WinActive( exe_code )
 }
 
 ; Ctrl+Tab でタブを切り替えられるアプリが前面かどうかを判定する

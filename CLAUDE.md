@@ -54,11 +54,14 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 |------|-----|-----|-----|-----|
 | Adobe系（Pr / Ai / Ps / Au / Ae / Lr） | 下 `{Down}` | 上 `{Up}` | `+{Tab}` | `{Tab}` |
 | デスクトップ | 縮小 `^-` | 拡大 `^+` | 無効 | 無効 |
+| テキスト編集アプリ（VSCode 等） | 縮小 `^-` | 拡大 `^+` | 元に戻す `^z` | やり直し `^+z` |
+| 　└ メモ帳 | 縮小 `^-` | 拡大 `^+` | 元に戻す `^z` | やり直し `^y` |
 | Chrome / エクスプローラー | 縮小 `^-` | 拡大 `^+` | 前のタブ `^+Tab` | 次のタブ `^Tab` |
-| メモ帳 | 縮小 `^-` | 拡大 `^+` | 元に戻す `^z` | やり直し `^y` |
 | デフォルト | 縮小 `^-` | 拡大 `^+` | `+{Tab}` | `{Tab}` |
 
 - Adobe系は `IsAdobeApp()` でまとめて判定する。Tab / Shift+Tab はどのAdobeアプリでもパネルの表示切り替えで共通のため
+- 元に戻す／やり直しの対象は `IsTextEditApp()` の明示リストで決める。キャレットの有無による自動判定（`CaretGetPos()`）は採用していない。Win32では正しく効くが、Chrome / VSCode などの Electron 系は入力欄にフォーカスしていても false を返すため（実測確認済み）。効くアプリと効かないアプリが混在すると挙動の境界が見えなくなる
+- メモ帳だけ `^+z` が効かないため、やり直しは `^y` を送る
 - F19/F20 は Adobe系以外では共通（表示倍率）。`^+` は Ctrl+Shift と解釈されるため、Send では `^{+}` と `+` を波括弧で囲む
 - デスクトップで F21/F22 を無効にしているのは、`^z` がファイル操作（移動・削除・リネーム）の巻き戻しになり誤操作の影響が大きいため。F19/F20 は無害なのでデフォルトのまま
 - `#HotIf` を並べず `AppKey()` の中で分岐する。「デフォルト＋例外」の優先順位が一目で分かるため（`AdobeCommon.ahk` の `OnCtrlEnterPost()` と同じ方針）
@@ -126,7 +129,7 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 - ウィンドウ判定は `#HotIf WinActive(...)` で行い、ブロック終端は `#HotIf` で閉じる
 - ウィンドウ識別子は yuya_allways.ahk でグローバル変数として定義
   - `exe_pr` / `exe_ai` / `exe_ps` / `exe_au` / `exe_ae` / `exe_lr` / `exe_bl` / `exe_pureref`
-  - `exe_chrome` / `exe_notepad`
+  - `exe_chrome` / `exe_notepad` / `exe_code`
   - `class_explorer` / `class_desktop` / `class_desktop_alt`（デスクトップは Progman、壁紙スライドショー中は WorkerW）
 - 新しいアプリ固有のホットキーは `apps/` に追加
 - 共通ユーティリティ関数は `lib/Functions.ahk` に追加
