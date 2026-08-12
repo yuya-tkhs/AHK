@@ -10,6 +10,7 @@ vk1D & Space:: {
     v: Clipboard
     x: Windows Menu
     h: 音声入力
+    a: Win+Ctrl+V
     r: Reload
     )", 5000)
     ih := InputHook("L1 T2") ; 次の1文字を待機 (L1: 1文字入力で終了, T2: 2秒でタイムアウト)
@@ -35,6 +36,7 @@ vk1D & Space:: {
         case "x":          Send("#x")
         case "c":          Send("#+c")
         case "h":          Send("#h")             ; Windows 音声入力
+        case "a":          Send("#^v")
         default:           MyTooltip("無効なキーです", 500)
     }
 }
