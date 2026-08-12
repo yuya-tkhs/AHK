@@ -55,7 +55,7 @@ RunAiScriptAsync(name, imeDialogTitle := "") {
     global _aiChildPid
     ; 多重起動ガード：前回の子がまだ生きていたら起動しない
     if (_aiChildPid && ProcessExist(_aiChildPid))
-        return
+        return 0                    ; 起動しなかったことを呼び出し元に伝える
     base := "W:\共有ドライブ\wc動画\sync\Assets\adobe-scripts_tkhs\illustrator\"
     childPath := A_ScriptDir "\lib\run_ai_script.ahk"
     Run('"' A_AhkPath '" "' childPath '" "' base name '"', , "Hide", &_aiChildPid)
@@ -68,6 +68,49 @@ RunAiScriptAsync(name, imeDialogTitle := "") {
             Send("{vk1D}")          ; 半角英数OFF
         }
     }
+    return _aiChildPid
+}
+
+; JSXの完了通知を、ダイアログではなく一時ファイル経由で受け取ってツールチップに出す。
+; JSX側は結果を .tmp に書いてから ai_jsx_result.txt にリネームするので、
+; 書きかけを読むことはない。こちらはその出現をポーリングして待つ。
+; ダイアログを出さないので「早めに押したEnterが消える」問題自体が起きなくなる。
+global _aiResultFile := A_Temp "\ai_jsx_result.txt"
+global _aiResultPid := 0
+global _aiResultDeadline := 0
+global _aiResultGrace := 0
+RunAiScriptWithTooltip(name, timeoutMs := 600000) {
+    global _aiResultFile, _aiResultPid, _aiResultDeadline, _aiResultGrace
+    try FileDelete(_aiResultFile)       ; 前回の残骸を消してから起動する
+    pid := RunAiScriptAsync(name)
+    if (!pid)                           ; 多重起動ガードで起動しなかった＝監視も始めない
+        return
+    _aiResultPid := pid
+    _aiResultDeadline := A_TickCount + timeoutMs
+    _aiResultGrace := 0
+    SetTimer(AiResultPoll, 200)
+}
+AiResultPoll() {
+    global _aiResultFile, _aiResultPid, _aiResultDeadline, _aiResultGrace
+    if FileExist(_aiResultFile) {
+        SetTimer(AiResultPoll, 0)
+        try {
+            body := FileRead(_aiResultFile, "UTF-8")
+            FileDelete(_aiResultFile)
+            MyTooltip(StrReplace(body, "`r`n", "`n"), 2500)
+        }
+        return
+    }
+    ; 子プロセスが消えたのに結果が無い＝キャンセルかエラー。静かに監視をやめる。
+    ; JSXはDoJavaScriptFileが返る前に書き終えるので、消えた後に出てくることはないが、
+    ; 取りこぼしを避けるため猶予を2回（400ms）置いてから止める。
+    if !ProcessExist(_aiResultPid) {
+        if (++_aiResultGrace >= 2)
+            SetTimer(AiResultPoll, 0)
+        return
+    }
+    if (A_TickCount > _aiResultDeadline)
+        SetTimer(AiResultPoll, 0)
 }
 
 ; 「見せるだけ」のダイアログを、出た時点でこちらから閉じる。
@@ -180,10 +223,9 @@ $~^Space:: {
         case "m": RunAiScriptAsync("create_artboard_shape.jsx")
         case "2": RunAiScriptAsync("rename_active_artboard.jsx")
         ; 書き出し（switchは既定で大文字小文字を区別するため e / E をそのまま分岐できる）
-        ; 完了ダイアログは待たずに自動で閉じる
-        case "e":
-            RunAiScriptAsync("render_active_artboard_10x.jsx")
-            AutoCloseDialog("書き出し完了")
+        ; e はJSXがダイアログを出さず結果ファイルを書く方式。E は旧方式（自動クローズ）のまま。
+        ; 移行中の比較用に両方を残してある。
+        case "e": RunAiScriptWithTooltip("render_active_artboard_10x.jsx")
         case "E":
             RunAiScriptAsync("render_active_artboard.jsx")
             AutoCloseDialog("書き出し完了")
