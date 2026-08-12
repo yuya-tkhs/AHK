@@ -154,6 +154,61 @@ AiResultPoll() {
 
 #HotIf WinActive(exe_ai)
 
+; 2ストロークのメニュー定義。
+; ツールチップの文言とキーの分岐を両方ここから生成するので、
+; 追加・変更はこの配列だけを直せばよい（以前は表示と switch の二重管理だった）。
+; f と 2 も同期のAiScriptから寄せてある。同期だとJSXが終わるまで本体が固まり、
+; その間ほかのホットキーが全部効かなくなるため。
+; e / E は大文字小文字で別コマンド。照合は「==」で行う（「=」は区別しない）。
+global AiMenu := [
+    { label: "アートボード", items: [
+        { key: "f", label: "移動",                 action: RunAiScriptAsync.Bind("go_to_artboard.jsx") },
+        { key: "a", label: "追加",                 action: RunAiScriptAsync.Bind("add_new_artboard.jsx") },
+        { key: "s", label: "中身を後ろへずらす",   action: RunAiScriptAsync.Bind("shift_artboard_contents.jsx") },
+        { key: "m", label: "枠を作成",             action: RunAiScriptAsync.Bind("create_artboard_shape.jsx") },
+        { key: "2", label: "名前を変更",           action: RunAiScriptAsync.Bind("rename_active_artboard.jsx") } ] },
+    { label: "書き出し", items: [
+        { key: "e", label: "PNG（10倍）",          action: RunAiScriptWithTooltip.Bind("render_active_artboard_10x.jsx") },
+        { key: "E", label: "PNG（等倍）",          action: RunAiScriptWithTooltip.Bind("render_active_artboard.jsx") } ] },
+    { label: "オブジェクト", items: [
+        { key: "t", label: "テキストプロパティエディタ", action: RunAiScriptAsync.Bind("text_property_editor.jsx") },
+        { key: "g", label: "位置・サイズ",         action: RunAiScriptAsync.Bind("xywh_input.jsx") } ] }
+]
+
+; メニュー定義からツールチップの文字列を組み立てる
+BuildAiMenuText(title) {
+    global AiMenu
+    text := title
+    for group in AiMenu {
+        text .= "`n- - - - - - - - - - - - - - - -`n" group.label
+        for item in group.items
+            text .= "`n" item.key ": " item.label
+    }
+    return text
+}
+
+; 押されたキーに対応する項目を返す（無ければ "")
+FindAiMenuItem(key) {
+    global AiMenu
+    for group in AiMenu
+        for item in group.items
+            if (item.key == key)    ; == で大文字小文字を区別（e と E を分ける）
+                return item
+    return ""
+}
+
+; メニューのキーを1つ読む。キャンセル・タイムアウトなら "" を返す。
+ReadAiMenuKey(timeoutSec := 5) {
+    ih := InputHook("L1 T" timeoutSec)
+    ih.KeyOpt("{Escape}{Space}", "E")
+    ih.Start()
+    ih.Wait()
+    if (ih.EndReason = "Timeout")
+        return ""
+    key := (ih.EndReason = "EndKey") ? ih.EndKey : ih.Input
+    return (key = "Escape") ? "" : key
+}
+
 ; 2ストローク（0.3秒以内の短押しのみ起動・長押しはIllustratorにそのまま渡す）
 $~^Space:: {
     static inLongPress := false
@@ -166,58 +221,20 @@ $~^Space:: {
         inLongPress := false
         return
     }
-    MyTooltip("
-    (
-    2ストローク待機中（5秒）
-    - - - - - - - - - - - - - - - -
-    アートボード
-    f: 移動
-    a: 追加
-    s: 中身を後ろへずらす
-    m: 枠を作成
-    2: 名前を変更
-    - - - - - - - - - - - - - - - -
-    書き出し
-    e: PNG（10倍）
-    E: PNG（等倍）
-    - - - - - - - - - - - - - - - -
-    オブジェクト
-    t: テキストプロパティエディタ
-    g: 位置・サイズ
-    )", 5000)
-    ih := InputHook("L1 T5")
-    ih.KeyOpt("{Escape}{Space}", "E")
-    ih.Start()
-    ih.Wait()
+    MyTooltip(BuildAiMenuText("2ストローク待機中（5秒）"), 5000)
+    key := ReadAiMenuKey()
     MyTooltip()
-    if (ih.EndReason = "Timeout") {
+    if (key = "")                   ; Escape かタイムアウト
         return
-    }
-    capturedKey := (ih.EndReason = "EndKey") ? ih.EndKey : ih.Input
     ; Common.ahk と違い、ここでは選択キーが離されるのを待たない。
-    ; どのcaseも Send を使わず AiScript / RunAiScriptAsync を呼ぶだけなので、
-    ; 「Sendと物理キーの衝突」を避ける必要がなく、待つとキーを離すまで
-    ; JSXの起動が始まらない＝ダイアログが出るのがその分遅れるため。
+    ; どの項目も Send を使わず JSX を起動するだけなので「Sendと物理キーの衝突」を
+    ; 避ける必要がなく、待つとキーを離すまでJSXの起動が始まらない＝ダイアログが
+    ; 出るのがその分遅れるため。
     ; （KeyWaitはAHKのスレッドを止めるだけでキーを抑制しないので、外しても取りこぼしは増えない）
-    switch capturedKey {
-        case "Escape": return
-        ; 並び順はツールチップの表示順に合わせている
-        ; アートボード（f と 2 も同期のAiScriptから寄せた。同期だとJSXが終わるまで
-        ; 本体が固まり、その間ほかのホットキーが全部効かなくなるため）
-        case "f": RunAiScriptAsync("go_to_artboard.jsx")
-        case "a": RunAiScriptAsync("add_new_artboard.jsx")
-        case "s": RunAiScriptAsync("shift_artboard_contents.jsx")
-        case "m": RunAiScriptAsync("create_artboard_shape.jsx")
-        case "2": RunAiScriptAsync("rename_active_artboard.jsx")
-        ; 書き出し（switchは既定で大文字小文字を区別するため e / E をそのまま分岐できる）
-        ; どちらもJSXはダイアログを出さず結果ファイルを書き、それをツールチップに出す
-        case "e": RunAiScriptWithTooltip("render_active_artboard_10x.jsx")
-        case "E": RunAiScriptWithTooltip("render_active_artboard.jsx")
-        ; オブジェクト
-        case "t": RunAiScriptAsync("text_property_editor.jsx")
-        case "g": RunAiScriptAsync("xywh_input.jsx")
-        default: MyTooltip("無効なキーです", 500)
-    }
+    if (item := FindAiMenuItem(key))
+        item.action.Call()
+    else
+        MyTooltip("無効なキーです", 500)
 }
 
 #HotIf
