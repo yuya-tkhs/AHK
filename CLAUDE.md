@@ -105,8 +105,8 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 | `vk1D + BS` | 前方削除（カーソルから行頭まで） |
 | `vk1D + Del` | 後方削除（カーソルから行末まで） |
 
-- `vk1D + BS` / `vk1D + Del` は `Ctrl+Shift+BS` / `Ctrl+Shift+Del` と同じ動作。無変換側は左手だけで完結するため両方を残している
 - 矢印に `{Blind}` を付けているのは、Shift併用時に選択を伸ばす動作を保つため
+- 削除系のもう一つとして `Ctrl+Shift+BS` に行削除（`{Home}+{End}+{Right}{BS}`）を割り当てている。行末の改行まで選択して消すため、次の行が繰り上がる
 
 ### その他のグローバル処理（apps/Common.ahk）
 
