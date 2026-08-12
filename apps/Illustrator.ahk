@@ -49,13 +49,32 @@ AiScript(name) {
 ; jsxを別AHKプロセスで非同期起動する。
 ; DoJavaScriptFileのブロックを子プロセスに肩代わりさせ、本体をフリーズさせない。
 global _aiChildPid := 0
+global _aiChildName := ""           ; 実行中のjsx名（警告表示に使う）
+
+; 実行中のJSXがあるか。多重起動ガードの判定をここ1か所にまとめる。
+IsAiScriptRunning() {
+    global _aiChildPid
+    return (_aiChildPid && ProcessExist(_aiChildPid)) ? true : false
+}
+
+; 多重起動ガードに掛かったことを知らせる。
+; 黙って起動しないと「押したのに何も起きない」ようにしか見えず、
+; JSXが動いているせいだと分からないため。
+WarnAiScriptBusy(name) {
+    global _aiChildName
+    MyTooltip("JSXの実行中です`n実行中　: " _aiChildName "`n起動不可: " name, 2500)
+}
+
 ; name: 実行するjsxファイル名
 ; imeDialogTitle: 指定するとそのダイアログが開いている間だけ日本語入力をON（閉じたらOFF）
 RunAiScriptAsync(name, imeDialogTitle := "") {
-    global _aiChildPid
+    global _aiChildPid, _aiChildName
     ; 多重起動ガード：前回の子がまだ生きていたら起動しない
-    if (_aiChildPid && ProcessExist(_aiChildPid))
+    if IsAiScriptRunning() {
+        WarnAiScriptBusy(name)
         return 0                    ; 起動しなかったことを呼び出し元に伝える
+    }
+    _aiChildName := name
     base := "W:\共有ドライブ\wc動画\sync\Assets\adobe-scripts_tkhs\illustrator\"
     childPath := A_ScriptDir "\lib\run_ai_script.ahk"
     Run('"' A_AhkPath '" "' childPath '" "' base name '"', , "Hide", &_aiChildPid)
@@ -81,9 +100,16 @@ global _aiResultDeadline := 0
 global _aiResultGrace := 0
 RunAiScriptWithTooltip(name, timeoutMs := 600000) {
     global _aiResultFile, _aiResultPid, _aiResultDeadline, _aiResultGrace
+    ; ガードに掛かるときは結果ファイルに触らずに抜ける。
+    ; 先に消してしまうと、実行中のJSXが書き終えた結果を横から削除してしまい、
+    ; 監視中のポーリングが拾えなくなる（rename直後〜読み取りまでの隙間で起きる）。
+    if IsAiScriptRunning() {
+        WarnAiScriptBusy(name)
+        return
+    }
     try FileDelete(_aiResultFile)       ; 前回の残骸を消してから起動する
     pid := RunAiScriptAsync(name)
-    if (!pid)                           ; 多重起動ガードで起動しなかった＝監視も始めない
+    if (!pid)                           ; 念のため（ここに来るのはRunに失敗したときだけ）
         return
     _aiResultPid := pid
     _aiResultDeadline := A_TickCount + timeoutMs
