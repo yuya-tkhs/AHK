@@ -242,6 +242,12 @@ BuildAiSubMenuText(group) {
     return text "`n- - - - - - - - - - - - - - - -`nBS: 戻る / Esc: キャンセル"
 }
 
+; 第1階層の末尾に出す案内。Space は EndKey に入っているだけで未割当だったので
+; ランチャーの入口に使っている（既存キーと衝突しない）。
+AiMenuFooter() {
+    return "`n- - - - - - - - - - - - - - - -`nSpace: ランチャー（一覧から選ぶ）"
+}
+
 ; InputHookのEndKey指定を組み立てる。
 ; 矢印のような文字にならないキーはEndKeyにしないと拾えないため、
 ; そのグループの項目から自動で拾う（1文字のキーは通常の文字入力で取れる）。
@@ -321,9 +327,13 @@ $~^Space:: {
     ; 出るのがその分遅れるため。
     ; （KeyWaitはAHKのスレッドを止めるだけでキーを抑制しないので、外しても取りこぼしは増えない）
     loop {
-        key := ReadAiMenuKey(BuildAiMenuText("2ストローク待機中（5秒）"))
+        key := ReadAiMenuKey(BuildAiMenuText("2ストローク待機中（5秒）") AiMenuFooter())
         if (key = "")               ; Escape かタイムアウト
             return
+        if (key = "Space") {        ; 一覧から選ぶランチャーを開く
+            ShowAiLauncher()
+            return
+        }
         ; グループキーならサブメニューへ降りる
         if (group := FindAiGroup(key)) {
             subKey := ReadAiMenuKey(BuildAiSubMenuText(group), true, group)
