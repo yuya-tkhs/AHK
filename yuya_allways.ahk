@@ -4,6 +4,13 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
+; #SingleInstance Force が旧インスタンスの置き換えに失敗したときの保険。
+; 二重常駐すると「~」付きホットキーが両方で発火し、片方のInputHookが
+; 取り残されて打鍵を横取りする（詳細は KillDuplicateInstances のコメント）。
+; ツールチップは読み込み完了後に出したいのでタイマーで遅らせる。
+if (dupKilled := KillDuplicateInstances())
+    SetTimer(() => MyTooltip("取り残された常駐を終了しました（" dupKilled "件）", 2500), -1500)
+
 ; 連続入力の警告を出にくくする設定
 A_HotkeyInterval := 2000
 A_MaxHotkeysPerInterval := 200

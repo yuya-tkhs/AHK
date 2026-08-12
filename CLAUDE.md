@@ -153,6 +153,14 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 `yuya_allways.ahk` を AutoHotkey v2 で実行する。
 `startup_manager.ahk` はシステム起動時に別プロセスで実行する。
 
+### 二重常駐への対策
+
+- **`#SingleInstance Force` は旧インスタンスの置き換えに失敗することがある。** 実際に11時間前の残骸と併存していた事例がある（どちらも `/restart` 付き＝`Reload` 由来）
+- 二重常駐すると `~` 付き（非抑制）のホットキーが**両方のインスタンスで発火する**。2ストロークでは InputHook が2本待機し、選択キーは片方が捕捉して抑制するため、**もう片方は待機したまま取り残されて後から押したキーを横取りする**。ダイアログ表示中の Enter が「無効なキーです」に化け、しかもその Enter は抑制されてダイアログにも届かない
+- 一度複製すると、以後の `Reload` はフック先頭の1プロセスしか更新しないため**複製状態が自己永続する**（古いコードのまま動き続ける残骸も残る）
+- 対策として `KillDuplicateInstances()`（lib/Functions.ahk）を `yuya_allways.ahk` の冒頭で呼ぶ。メインウィンドウのタイトルが `<スクリプトのフルパス> - AutoHotkey v2.0.x` 形式なので前方一致で判定でき、他のスクリプトやコンパイル済みexe（Sppy等）には当たらない。応答不能な残骸でも確実に落とすため `ProcessClose` を使う
+- 常駐数の確認方法：`Get-CimInstance Win32_Process -Filter "Name LIKE '%AutoHotkey%'" | Select ProcessId, CommandLine`
+
 ### 構文チェック
 
 `yuya_allways.ahk` は `#SingleInstance Force` を持つため、直接実行すると常駐中のインスタンスを終了させてしまう。

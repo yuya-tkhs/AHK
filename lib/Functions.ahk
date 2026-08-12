@@ -44,6 +44,34 @@ IsWideChar(code) {
         || (code >= 0xFFE0 && code <= 0xFFE6)    ; 全角記号
 }
 
+; 取り残された同一スクリプトの常駐を終了する（戻り値：終了した数）。
+; #SingleInstance Force は旧インスタンスの置き換えに失敗することがあり、
+; 失敗すると同じスクリプトが二重に常駐したままになる。
+; この状態では「~」付き（非抑制）のホットキーが両方のインスタンスで発火するため
+; InputHookが2本待機し、選択キーを捕捉できなかった方が待機したまま取り残されて、
+; 後から押したキーを横取りする（ダイアログ表示中のEnterが「無効なキーです」に
+; 化ける原因。実際に11時間前の残骸と併存していた事例あり）。
+; メインウィンドウのタイトルは「<スクリプトのフルパス> - AutoHotkey v2.0.x」なので、
+; 前方一致で判定すれば他のスクリプトやコンパイル済みexeには当たらない。
+; ProcessClose を使うのは、応答不能になった残骸でも確実に落とすため。
+KillDuplicateInstances() {
+    prevDetect := A_DetectHiddenWindows
+    DetectHiddenWindows true
+    killed := 0
+    for hwnd in WinGetList("ahk_class AutoHotkey") {
+        if (hwnd = A_ScriptHwnd)        ; 自分自身は対象外
+            continue
+        try {
+            if (SubStr(WinGetTitle(hwnd), 1, StrLen(A_ScriptFullPath)) = A_ScriptFullPath) {
+                ProcessClose(WinGetPID(hwnd))
+                killed++
+            }
+        }
+    }
+    DetectHiddenWindows prevDetect
+    return killed
+}
+
 ; クリップボードの中身がURLらしいか判定する
 ; 前後の囲み文字を許容しつつ、http(s):// / 欠けたスキーム / www. 始まりをURLとみなす
 IsUrl(text) {
