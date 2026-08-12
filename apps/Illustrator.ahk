@@ -117,9 +117,11 @@ $~^Space:: {
         return
     }
     capturedKey := (ih.EndReason = "EndKey") ? ih.EndKey : ih.Input
-    if (capturedKey != "") {
-        KeyWait(StrLower(capturedKey))
-    }
+    ; Common.ahk と違い、ここでは選択キーが離されるのを待たない。
+    ; どのcaseも Send を使わず AiScript / RunAiScriptAsync を呼ぶだけなので、
+    ; 「Sendと物理キーの衝突」を避ける必要がなく、待つとキーを離すまで
+    ; JSXの起動が始まらない＝ダイアログが出るのがその分遅れるため。
+    ; （KeyWaitはAHKのスレッドを止めるだけでキーを抑制しないので、外しても取りこぼしは増えない）
     switch capturedKey {
         case "Escape": return
         ; 並び順はツールチップの表示順に合わせている
