@@ -8,26 +8,39 @@ global SppyExe := "W:\マイドライブ\Programming\Sppy_1_5\Sppy_1_5.exe"
 SetTimer(CheckIllustrator, 10000)
 CheckIllustrator() {
     global SppyExe
+    static verifiedPid := 0
     if !ProcessExist("Illustrator.exe")
         return
+    ; 実行パスを確認できたPIDが生きている間は、WMIを叩かずここで抜ける。
+    ; WMIクエリは実測125〜141msかかり、その間AHK全体が止まる。
+    ; 素通りさせるとIllustrator起動中はずっと10秒ごとに固まることになるため。
+    ; （ProcessExist(pid)は実測0〜16ms）
+    if (verifiedPid && ProcessExist(verifiedPid))
+        return
+    verifiedPid := 0
     ; プロセス名ではなく実行パスで判定する。
     ; 共有ドライブ版など別パスのSppyが動いていたら終了し、マイドライブ版に差し替える。
     correctRunning := false
     wrongPids := []
     query := ComObjGet("winmgmts:").ExecQuery("SELECT ProcessId, ExecutablePath FROM Win32_Process WHERE Name = 'Sppy_1_5.exe'")
     for proc in query {
-        if (proc.ExecutablePath = SppyExe)
+        if (proc.ExecutablePath = SppyExe) {
             correctRunning := true
-        else
+            verifiedPid := proc.ProcessId   ; 次回以降はこのPIDの生死だけ見る
+        } else {
             wrongPids.Push(proc.ProcessId)
+        }
     }
     if correctRunning
         return
     for pid in wrongPids
         ProcessClose(pid)
-    Run(SppyExe)
+    Run(SppyExe, , , &newPid)
+    verifiedPid := newPid
 }
 
+; 同期実行。JSXが終わるまで本体が固まりホットキーが全部止まるため、現在の呼び出し元は無い。
+; ダイアログを出さず一瞬で終わるJSXを足すとき以外は RunAiScriptAsync を使う。
 AiScript(name) {
     static base := "W:\共有ドライブ\wc動画\sync\Assets\adobe-scripts_tkhs\illustrator\"
     ComObjActive("Illustrator.Application").DoJavaScriptFile(base name)
@@ -55,6 +68,38 @@ RunAiScriptAsync(name, imeDialogTitle := "") {
             Send("{vk1D}")          ; 半角英数OFF
         }
     }
+}
+
+; 「見せるだけ」のダイアログを、出た時点でこちらから閉じる。
+; 書き出しのように時間がかかる処理では、待ちきれずに早めに押したEnterは
+; ダイアログがまだ無いためIllustrator本体に吸われて消える。結局もう一度
+; 押し直すことになり一拍待たされるので、そもそも押さなくて済むようにする。
+; 消える内容はツールチップに移すため、ファイル名・保存先は失われない。
+; WinWaitはスレッドを占有するので使わず、SetTimerでポーリングする。
+global _autoCloseTitle := ""
+global _autoCloseDeadline := 0
+AutoCloseDialog(title, timeoutMs := 600000) {
+    global _autoCloseTitle, _autoCloseDeadline
+    _autoCloseTitle := title
+    _autoCloseDeadline := A_TickCount + timeoutMs
+    SetTimer(AutoClosePoll, 200)
+}
+AutoClosePoll() {
+    global _autoCloseTitle, _autoCloseDeadline
+    if !WinExist(_autoCloseTitle) {
+        if (A_TickCount > _autoCloseDeadline)   ; 出ないまま時間切れ（JSXが失敗した等）
+            SetTimer(AutoClosePoll, 0)
+        return
+    }
+    SetTimer(AutoClosePoll, 0)
+    body := WinGetText(_autoCloseTitle)         ; 閉じる前に中身を控える
+    WinActivate(_autoCloseTitle)
+    Sleep(80)                                   ; フォーカスが移るのを待つ
+    Send("{Enter}")                             ; ScriptUIのOKボタンは素のEnterで反応する
+    Sleep(120)
+    if WinExist(_autoCloseTitle)                ; Enterで閉じなければ強制的に閉じる
+        WinClose(_autoCloseTitle)
+    MyTooltip(body != "" ? body : _autoCloseTitle, 2500)
 }
 
 #HotIf WinActive(exe_ai)
@@ -125,15 +170,21 @@ $~^Space:: {
     switch capturedKey {
         case "Escape": return
         ; 並び順はツールチップの表示順に合わせている
-        ; アートボード
-        case "f": AiScript("go_to_artboard.jsx")
+        ; アートボード（f と 2 も同期のAiScriptから寄せた。同期だとJSXが終わるまで
+        ; 本体が固まり、その間ほかのホットキーが全部効かなくなるため）
+        case "f": RunAiScriptAsync("go_to_artboard.jsx")
         case "a": RunAiScriptAsync("add_new_artboard.jsx")
         case "s": RunAiScriptAsync("shift_artboard_contents.jsx")
         case "m": RunAiScriptAsync("create_artboard_shape.jsx")
-        case "2": AiScript("rename_active_artboard.jsx")
+        case "2": RunAiScriptAsync("rename_active_artboard.jsx")
         ; 書き出し（switchは既定で大文字小文字を区別するため e / E をそのまま分岐できる）
-        case "e": RunAiScriptAsync("render_active_artboard_10x.jsx")
-        case "E": RunAiScriptAsync("render_active_artboard.jsx")
+        ; 完了ダイアログは待たずに自動で閉じる
+        case "e":
+            RunAiScriptAsync("render_active_artboard_10x.jsx")
+            AutoCloseDialog("書き出し完了")
+        case "E":
+            RunAiScriptAsync("render_active_artboard.jsx")
+            AutoCloseDialog("書き出し完了")
         ; オブジェクト
         case "t": RunAiScriptAsync("text_property_editor.jsx")
         case "g": RunAiScriptAsync("xywh_input.jsx")
