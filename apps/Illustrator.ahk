@@ -160,53 +160,88 @@ AiResultPoll() {
 ; f と 2 も同期のAiScriptから寄せてある。同期だとJSXが終わるまで本体が固まり、
 ; その間ほかのホットキーが全部効かなくなるため。
 ; e / E は大文字小文字で別コマンド。照合は「==」で行う（「=」は区別しない）。
+; グループの key は第2打鍵でサブメニューへ降りるためのもの。
+; 既存の項目キーは第2打鍵のままなので、f は「^Space f」でも「^Space b f」でも届く。
+; 今後増やすものは原則サブメニュー側へ足し、頻用になったら第2打鍵へ昇格させる。
 global AiMenu := [
-    { label: "アートボード", items: [
+    { key: "b", label: "アートボード", items: [
         { key: "f", label: "移動",                 action: RunAiScriptAsync.Bind("go_to_artboard.jsx") },
         { key: "a", label: "追加",                 action: RunAiScriptAsync.Bind("add_new_artboard.jsx") },
         { key: "s", label: "中身を後ろへずらす",   action: RunAiScriptAsync.Bind("shift_artboard_contents.jsx") },
         { key: "m", label: "枠を作成",             action: RunAiScriptAsync.Bind("create_artboard_shape.jsx") },
         { key: "2", label: "名前を変更",           action: RunAiScriptAsync.Bind("rename_active_artboard.jsx") } ] },
-    { label: "書き出し", items: [
+    { key: "x", label: "書き出し", items: [
         { key: "e", label: "PNG（10倍）",          action: RunAiScriptWithTooltip.Bind("render_active_artboard_10x.jsx") },
         { key: "E", label: "PNG（等倍）",          action: RunAiScriptWithTooltip.Bind("render_active_artboard.jsx") } ] },
-    { label: "オブジェクト", items: [
+    { key: "o", label: "オブジェクト", items: [
         { key: "t", label: "テキストプロパティエディタ", action: RunAiScriptAsync.Bind("text_property_editor.jsx") },
         { key: "g", label: "位置・サイズ",         action: RunAiScriptAsync.Bind("xywh_input.jsx") } ] }
 ]
 
-; メニュー定義からツールチップの文字列を組み立てる
+; 第1階層のツールチップ。グループ見出しに降り先のキーを併記する
 BuildAiMenuText(title) {
     global AiMenu
     text := title
     for group in AiMenu {
-        text .= "`n- - - - - - - - - - - - - - - -`n" group.label
+        text .= "`n- - - - - - - - - - - - - - - -`n" group.label " [" group.key "]"
         for item in group.items
             text .= "`n" item.key ": " item.label
     }
     return text
 }
 
-; 押されたキーに対応する項目を返す（無ければ "")
-FindAiMenuItem(key) {
+; 第2階層（サブメニュー）のツールチップ。1行目をパンくずにする
+BuildAiSubMenuText(group) {
+    text := "2ストローク > " group.label "（5秒）"
+    text .= "`n- - - - - - - - - - - - - - - -"
+    for item in group.items
+        text .= "`n" item.key ": " item.label
+    return text "`n- - - - - - - - - - - - - - - -`nBS: 戻る / Esc: キャンセル"
+}
+
+; 押されたキーに対応する項目を返す（無ければ ""）。
+; group を渡すとそのグループ内だけを探す。
+FindAiMenuItem(key, group := "") {
     global AiMenu
-    for group in AiMenu
-        for item in group.items
+    for g in (group ? [group] : AiMenu)
+        for item in g.items
             if (item.key == key)    ; == で大文字小文字を区別（e と E を分ける）
                 return item
     return ""
 }
 
-; メニューのキーを1つ読む。キャンセル・タイムアウトなら "" を返す。
-ReadAiMenuKey(timeoutSec := 5) {
+; 押されたキーに対応するグループを返す（無ければ ""）
+FindAiGroup(key) {
+    global AiMenu
+    for group in AiMenu
+        if (group.key == key)
+            return group
+    return ""
+}
+
+; メニューを出してキーを1つ読む。Escapeとタイムアウトは "" を返す。
+; 「戻る」を許すと Backspace をそのまま返す。
+; フックはツールチップを描く「前」に張る。Wait()が返ってから次のStartまでの
+; 隙間に押されたキーはIllustratorへ素通りし、単キーがツール切替に化けるため。
+ReadAiMenuKey(menuText, allowBack := false, timeoutSec := 5) {
     ih := InputHook("L1 T" timeoutSec)
-    ih.KeyOpt("{Escape}{Space}", "E")
+    ih.KeyOpt(allowBack ? "{Escape}{Space}{Backspace}" : "{Escape}{Space}", "E")
     ih.Start()
+    MyTooltip(menuText, timeoutSec * 1000)
     ih.Wait()
+    MyTooltip()
     if (ih.EndReason = "Timeout")
         return ""
     key := (ih.EndReason = "EndKey") ? ih.EndKey : ih.Input
     return (key = "Escape") ? "" : key
+}
+
+; 選んだ項目を実行する。該当が無ければ知らせるだけ。
+RunAiMenuItem(key, group := "") {
+    if (item := FindAiMenuItem(key, group))
+        item.action.Call()
+    else
+        MyTooltip("無効なキーです", 500)
 }
 
 ; 2ストローク（0.3秒以内の短押しのみ起動・長押しはIllustratorにそのまま渡す）
@@ -221,20 +256,28 @@ $~^Space:: {
         inLongPress := false
         return
     }
-    MyTooltip(BuildAiMenuText("2ストローク待機中（5秒）"), 5000)
-    key := ReadAiMenuKey()
-    MyTooltip()
-    if (key = "")                   ; Escape かタイムアウト
-        return
     ; Common.ahk と違い、ここでは選択キーが離されるのを待たない。
     ; どの項目も Send を使わず JSX を起動するだけなので「Sendと物理キーの衝突」を
     ; 避ける必要がなく、待つとキーを離すまでJSXの起動が始まらない＝ダイアログが
     ; 出るのがその分遅れるため。
     ; （KeyWaitはAHKのスレッドを止めるだけでキーを抑制しないので、外しても取りこぼしは増えない）
-    if (item := FindAiMenuItem(key))
-        item.action.Call()
-    else
-        MyTooltip("無効なキーです", 500)
+    loop {
+        key := ReadAiMenuKey(BuildAiMenuText("2ストローク待機中（5秒）"))
+        if (key = "")               ; Escape かタイムアウト
+            return
+        ; グループキーならサブメニューへ降りる
+        if (group := FindAiGroup(key)) {
+            subKey := ReadAiMenuKey(BuildAiSubMenuText(group), true)
+            if (subKey = "")
+                return
+            if (subKey = "Backspace")
+                continue             ; 第1階層へ戻る
+            RunAiMenuItem(subKey, group)
+            return
+        }
+        RunAiMenuItem(key)           ; 従来どおりの2打鍵
+        return
+    }
 }
 
 #HotIf
