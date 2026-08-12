@@ -3,11 +3,11 @@
 ;;
 ;;   対象                       F19          F20          F21            F22
 ;;   -------------------------- ------------ ------------ -------------- --------------
-;;   Adobe系（Pr/Ai/Ps/Au/Ae/Lr） +{Tab}      {Tab}        下 {Down}      上 {Up}
+;;   Adobe系（Pr/Ai/Ps/Au/Ae/Lr） 下 {Down}   上 {Up}      +{Tab}         {Tab}
 ;;   デスクトップ               表示縮小 ^-  表示拡大 ^+  無効           無効
 ;;   Chrome / エクスプローラー  表示縮小 ^-  表示拡大 ^+  前のタブ ^+Tab 次のタブ ^Tab
 ;;   メモ帳                     表示縮小 ^-  表示拡大 ^+  元に戻す ^z    やり直し ^y
-;;   デフォルト                 表示縮小 ^-  表示拡大 ^+  元に戻す ^z    やり直し ^+z
+;;   デフォルト                 表示縮小 ^-  表示拡大 ^+  +{Tab}         {Tab}
 ;;
 ;; #HotIf を並べず1か所で分岐しているのは、AdobeCommon.ahk の OnCtrlEnterPost() と同じ理由。
 ;; 「デフォルト＋例外」という優先順位がコード上で一目で分かるため。
@@ -26,10 +26,10 @@ AppKey( key ) {
     ; Tab / Shift+Tab はどのAdobeアプリでもパネルの表示切り替えで共通
     if IsAdobeApp() {
         switch key {
-            case "F19": Send( "+{Tab}" )
-            case "F20": Send( "{Tab}" )
-            case "F21": Send( "{Down}" )
-            case "F22": Send( "{Up}" )
+            case "F19": Send( "{Down}" )
+            case "F20": Send( "{Up}" )
+            case "F21": Send( "+{Tab}" )
+            case "F22": Send( "{Tab}" )
         }
         return
     }
@@ -59,8 +59,8 @@ AppKey( key ) {
         Send( key = "F21" ? "^z" : "^y" )
         return
     }
-    ; デフォルト：元に戻す／やり直し
-    Send( key = "F21" ? "^z" : "^+z" )
+    ; デフォルト：素の Tab / Shift+Tab（フォーカス移動・パネル送り）
+    Send( key = "F21" ? "+{Tab}" : "{Tab}" )
 }
 
 ; Adobe系アプリが前面かどうかを判定する
