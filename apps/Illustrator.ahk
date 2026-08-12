@@ -92,7 +92,9 @@ AutoClosePoll() {
         return
     }
     SetTimer(AutoClosePoll, 0)
-    body := WinGetText(_autoCloseTitle)         ; 閉じる前に中身を控える
+    ; 閉じる前に中身を控える。ただしScriptUI（JSXのWindow）は標準のWin32コントロールを
+    ; 使わないため空が返る（実測確認済み）。その場合はタイトルだけツールチップに出す。
+    body := WinGetText(_autoCloseTitle)
     WinActivate(_autoCloseTitle)
     Sleep(80)                                   ; フォーカスが移るのを待つ
     Send("{Enter}")                             ; ScriptUIのOKボタンは素のEnterで反応する

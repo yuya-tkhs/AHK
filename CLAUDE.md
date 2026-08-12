@@ -100,7 +100,9 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 - `AiScript()` は COM 経由で同期実行（本体がブロックされる）。JSXが終わるまでホットキーが全部止まるため現在の呼び出し元は無い。JSXの起動はすべて `RunAiScriptAsync()` に寄せてある
 - `RunAiScriptAsync()` は `lib/run_ai_script.ahk` を別プロセスで起動し、ダイアログ表示中も本体をフリーズさせない
-- `AutoCloseDialog()` は「見せるだけ」のダイアログ（`書き出し完了`）が出た時点で自動的に閉じ、中身をツールチップに移す。書き出し中に待ちきれず押したEnterは、ダイアログがまだ無いためIllustrator本体に吸われて消え、結局押し直しになるため。`WinWait` はスレッドを占有するので使わず `SetTimer` でポーリングする
+- `AutoCloseDialog()` は「見せるだけ」のダイアログ（`書き出し完了`）が出た時点で自動的に閉じる。書き出し中に待ちきれず押したEnterは、ダイアログがまだ無いためIllustrator本体に吸われて消え、結局押し直しになるため。`WinWait` はスレッドを占有するので使わず `SetTimer` でポーリングする
+- ScriptUI（JSXの `new Window`）は標準のWin32コントロールを使わないため、**`WinGetText()` では中身が取れない**（実測確認済み・空が返る）。ダイアログ内のファイル名や保存先をAHK側で読むことはできないので、必要ならJSXにパスをファイル出力させてそれを読む
+- ScriptUIのダイアログは `WinActivate` してから `Send("{Enter}")` で閉じられる（OKボタンが反応する）。効かない場合に備えて `WinClose` へフォールバックしている
 - Sppy_1_5 は10秒ごとに判定するが、実行パスを確認できたPIDが生きている間は `ProcessExist(pid)` だけで抜ける。WMIクエリ（`Win32_Process`）は実測125〜141msかかり、その間AHK全体が止まるため、毎回叩くとIllustrator起動中は10秒ごとに固まる
 - 2ストロークの `switch` の前で `KeyWait` しない。Illustratorのcaseはどれも `Send` を使わないので衝突を避ける必要がなく、待つとキーを離すまでJSXの起動が始まらないため（`Common.ahk` 側は `Send` を使うので必要）
 
