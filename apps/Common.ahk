@@ -55,9 +55,10 @@ vk1D & Enter:: {
         Send("{End}{Enter}")
 }
 
-vk1D & BS:: Send("{Home}+{End}+{Right}{BS}") ;;行削除
-+^BS::      Send("+{Home}{BS}") ;;前方削除
-+^Del::     Send("+{End}{BS}")  ;;後方削除
+vk1D & BS::  Send("+{Home}{BS}") ;;前方削除（行頭まで）
+vk1D & Del:: Send("+{End}{BS}")  ;;後方削除（行末まで）
++^BS::       Send("+{Home}{BS}") ;;前方削除
++^Del::      Send("+{End}{BS}")  ;;後方削除
 
 ; 短時間に2回Escを押したら無変換（半角英数）を送る
 ; 「~」を付けてEsc自体は素通しさせるため、各アプリ本来のEsc動作はそのまま残る

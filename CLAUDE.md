@@ -93,6 +93,21 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 - `RunAiScriptAsync()` は `lib/run_ai_script.ahk` を別プロセスで起動し、ダイアログ表示中も本体をフリーズさせない
 - Sppy_1_5 は10秒ごとに実行パスで判定し、別パスのものが動いていれば差し替える
 
+### 無変換（vk1D）の同時押し（apps/Common.ahk）
+
+| キー | 動作 |
+|------|------|
+| `vk1D` 単押し | `{vk1D}` をそのまま送る（半角英数） |
+| `vk1D + 左クリック` | ダブルクリック |
+| `vk1D + vk1C` | `{vk1C}`（変換＝日本語入力ON） |
+| `vk1D + ↑ / ↓ / ← / →` | その向きへ5回移動（`{Blind}` 付きで修飾キーは維持） |
+| `vk1D + Enter` | 行末で改行。Ctrl併用で1行上の行末に改行 |
+| `vk1D + BS` | 前方削除（カーソルから行頭まで） |
+| `vk1D + Del` | 後方削除（カーソルから行末まで） |
+
+- `vk1D + BS` / `vk1D + Del` は `Ctrl+Shift+BS` / `Ctrl+Shift+Del` と同じ動作。無変換側は左手だけで完結するため両方を残している
+- 矢印に `{Blind}` を付けているのは、Shift併用時に選択を伸ばす動作を保つため
+
 ### その他のグローバル処理（apps/Common.ahk）
 
 - `ResetStuckKeys()` … 1500ms間隔で修飾キーのスタック（論理ON・物理OFF）を検出して自動解除
@@ -125,14 +140,22 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 ### 構文チェック
 
 `yuya_allways.ahk` は `#SingleInstance Force` を持つため、直接実行すると常駐中のインスタンスを終了させてしまう。
-個別ファイルだけを検証したい場合は、`ExitApp` を `#Include` より前に置いたラッパーを一時ディレクトリに作って実行する。
+代わりに、`yuya_allways.ahk` から `#SingleInstance` だけを外した写しを一時ディレクトリに作って実行する。
+グローバル変数の定義をそのまま写し、`ExitApp 0` を `#Include` 群より前に置き、`#Include` は絶対パスにする。
 
 ```ahk
 #Requires AutoHotkey v2.0
-FileAppend "PARSE-OK`n", "*"
+SetTitleMatchMode(2)
+global exe_pr := "ahk_exe Adobe Premiere Pro.exe"
+; …yuya_allways.ahk のグローバル定義をすべて写す
+
 ExitApp 0
-#Include <検証したいファイルの絶対パス>
+
+#Include W:\マイドライブ\Programming\AHK\lib\ToolTipEx.ahk
+; …以下、yuya_allways.ahk と同じ順序ですべて
 ```
 
+- 検証したいファイル1つだけを `#Include` すると、他ファイルの関数（`MyTooltip()` 等）が未定義になり、AHK v2 はこれをロード時エラーにする。正常なコードでも exit 2 になるため、必ず全ファイルを揃えて読み込む
+- 終了コードで判定する（0 = OK、2 = ロードエラー）。AutoHotkey64.exe は GUI サブシステムのため stdout が取れず、`FileAppend "…", "*"` の出力は届かない。PowerShell では `Start-Process -Wait -PassThru` の `ExitCode` を見る
 - `/validate` は AutoHotkey v2.0 では未対応（引数がスクリプト名として扱われる）
-- `/ErrorStdOut` はこの環境では正常なスクリプトでも exit 2 を返すため付けない
+- `/ErrorStdOut` を付けてもこの環境ではメッセージが得られないため付けない
