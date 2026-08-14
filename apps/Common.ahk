@@ -1,4 +1,4 @@
-vk1D & Space:: {
+#Space:: {
     MyTooltip("
     (
     2ストローク待機中（5秒）
@@ -26,6 +26,9 @@ vk1D & Space:: {
     if (capturedKey != "") {
         KeyWait(StrLower(capturedKey))
     }
+    ; トリガーのWinを押したままだと Send の修飾キー状態が狂う（特に f の {LWin} 単独送出）
+    KeyWait("LWin")
+    KeyWait("RWin")
     switch capturedKey {
         case "Escape":     return              ; Escが押されたら安全にキャンセル
         case "e":          Send("#e")
