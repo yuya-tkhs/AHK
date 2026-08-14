@@ -183,33 +183,52 @@ AiResultPoll() {
 ; 今後増やすものは原則サブメニュー側へ足し、頻用になったら direct を付けて昇格させる。
 ; disp は表示用（矢印キーは "Left" ではなく "←" と出す）。
 ; 矢印のような複数文字のキーは InputHook の EndKey に自動で加えられる。
+; 実行内容は jsx（ファイル名）か menucmd（Illustratorのメニューコマンド）で持つ。
+; 関数を Bind したものを直接持たせると実行はできても中身を取り出せず、
+; ランチャーにファイル名を出せないため、定義側に素の値で置く。
+; tooltip: true の項目だけ完了通知を結果ファイル経由で受け取る。
 global AiMenu := [
     { key: "b", label: "アートボード", items: [
-        { key: "f", label: "移動",                 action: RunAiScriptAsync.Bind("go_to_artboard.jsx") },
-        { key: "a", label: "追加",                 action: RunAiScriptAsync.Bind("add_new_artboard.jsx") },
-        { key: "s", label: "中身を後ろへずらす",   action: RunAiScriptAsync.Bind("shift_artboard_contents.jsx") },
-        { key: "m", label: "枠を作成",             action: RunAiScriptAsync.Bind("create_artboard_shape.jsx") },
-        { key: "2", label: "名前を変更",           action: RunAiScriptAsync.Bind("rename_active_artboard.jsx") } ] },
+        { key: "f", label: "移動",               jsx: "go_to_artboard.jsx" },
+        { key: "a", label: "追加",               jsx: "add_new_artboard.jsx" },
+        { key: "s", label: "中身を後ろへずらす", jsx: "shift_artboard_contents.jsx" },
+        { key: "m", label: "枠を作成",           jsx: "create_artboard_shape.jsx" },
+        { key: "2", label: "名前を変更",         jsx: "rename_active_artboard.jsx" } ] },
     { key: "x", label: "書き出し", items: [
-        { key: "e", label: "PNG（10倍）", direct: true, action: RunAiScriptWithTooltip.Bind("render_active_artboard_10x.jsx") },
-        { key: "E", label: "PNG（等倍）", direct: true, action: RunAiScriptWithTooltip.Bind("render_active_artboard.jsx") } ] },
+        { key: "e", label: "PNG（10倍）", direct: true, tooltip: true, jsx: "render_active_artboard_10x.jsx" },
+        { key: "E", label: "PNG（等倍）", direct: true, tooltip: true, jsx: "render_active_artboard.jsx" } ] },
     { key: "o", label: "オブジェクト", items: [
-        { key: "t", label: "テキストプロパティエディタ", direct: true, action: RunAiScriptAsync.Bind("text_property_editor.jsx") },
-        { key: "g", label: "位置・サイズ", direct: true, action: RunAiScriptAsync.Bind("xywh_input.jsx") } ] },
+        { key: "t", label: "テキストプロパティエディタ", direct: true, jsx: "text_property_editor.jsx" },
+        { key: "g", label: "位置・サイズ", direct: true, jsx: "xywh_input.jsx" } ] },
     ; 整列はIllustratorのメニューコマンド（JSXは存在しない）。割り当てはSppyと同じ
     { key: "a", label: "整列", items: [
-        { key: "Left",  disp: "←", label: "左に整列",     action: RunAiMenuCommand.Bind("Horizontal Align Left", "左に整列") },
-        { key: "Right", disp: "→", label: "右に整列",     action: RunAiMenuCommand.Bind("Horizontal Align Right", "右に整列") },
-        { key: "Up",    disp: "↑", label: "上に整列",     action: RunAiMenuCommand.Bind("Vertical Align Top", "上に整列") },
-        { key: "Down",  disp: "↓", label: "下に整列",     action: RunAiMenuCommand.Bind("Vertical Align Bottom", "下に整列") },
-        { key: "c", label: "水平方向中央に整列", action: RunAiMenuCommand.Bind("Horizontal Align Center", "水平方向中央に整列") },
-        { key: "m", label: "垂直方向中央に整列", action: RunAiMenuCommand.Bind("Vertical Align Center", "垂直方向中央に整列") } ] },
+        { key: "Left",  disp: "←", label: "左に整列", menucmd: "Horizontal Align Left" },
+        { key: "Right", disp: "→", label: "右に整列", menucmd: "Horizontal Align Right" },
+        { key: "Up",    disp: "↑", label: "上に整列", menucmd: "Vertical Align Top" },
+        { key: "Down",  disp: "↓", label: "下に整列", menucmd: "Vertical Align Bottom" },
+        { key: "c", label: "水平方向中央に整列", menucmd: "Horizontal Align Center" },
+        { key: "m", label: "垂直方向中央に整列", menucmd: "Vertical Align Center" } ] },
     ; 文字揃えは sttk3 製のJSX。Sppyで実際に使っていた3つだけ載せる
     { key: "j", label: "文字揃え", items: [
-        { key: "Left",  disp: "←", label: "左揃え",   action: RunAiScriptAsync.Bind("sttk3-changeJustification\justification=left.jsx") },
-        { key: "Right", disp: "→", label: "右揃え",   action: RunAiScriptAsync.Bind("sttk3-changeJustification\justification=right.jsx") },
-        { key: "Up",    disp: "↑", label: "中央揃え", action: RunAiScriptAsync.Bind("sttk3-changeJustification\justification=center.jsx") } ] }
+        { key: "Left",  disp: "←", label: "左揃え",   jsx: "sttk3-changeJustification\justification=left.jsx" },
+        { key: "Right", disp: "→", label: "右揃え",   jsx: "sttk3-changeJustification\justification=right.jsx" },
+        { key: "Up",    disp: "↑", label: "中央揃え", jsx: "sttk3-changeJustification\justification=center.jsx" } ] }
 ]
+
+; 項目の実行内容を組み立てる（定義から都度作るので二重管理にならない）
+AiItemAction(item) {
+    if item.HasOwnProp("menucmd")
+        return RunAiMenuCommand.Bind(item.menucmd, item.label)
+    if (item.HasOwnProp("tooltip") && item.tooltip)
+        return RunAiScriptWithTooltip.Bind(item.jsx)
+    return RunAiScriptAsync.Bind(item.jsx)
+}
+
+; ランチャーに出す名前。ファイル名（またはメニューコマンド名）をそのまま使う。
+; 半角のまま検索できて識別しやすいため、日本語ラベルより優先する。
+AiItemName(item) {
+    return item.HasOwnProp("menucmd") ? item.menucmd : item.jsx
+}
 
 ; 項目の表示用キー（矢印は disp に "←" などを持たせてある）
 AiItemDisp(item) {
@@ -304,7 +323,7 @@ ReadAiMenuKey(menuText, allowBack := false, group := "", timeoutSec := 5) {
 ; 選んだ項目を実行する。該当が無ければ知らせるだけ。
 RunAiMenuItem(key, group := "") {
     if (item := FindAiMenuItem(key, group))
-        item.action.Call()
+        AiItemAction(item).Call()
     else
         MyTooltip("無効なキーです", 500)
 }

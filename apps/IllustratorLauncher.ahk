@@ -19,13 +19,16 @@ global _aiLauncherGui := ""
 global _aiLauncherLV := ""
 global _aiLauncherItems := []
 
-; AiMenu を平坦化して一覧用の配列にする（グループ名は分類として別列に出す）
+; AiMenu を平坦化して一覧用の配列にする。
+; 1列目はファイル名（メニューコマンドはコマンド名）。半角のまま検索でき、
+; フォルダ列挙で日本語ラベルを持たない項目が増えても表記が揃うため。
+; 2列目に日本語ラベルを説明として出す。
 BuildAiLauncherItems() {
     global AiMenu
     items := []
     for group in AiMenu
         for item in group.items
-            items.Push({ label: item.label, group: group.label, action: item.action })
+            items.Push({ name: AiItemName(item), label: item.label, group: group.label, action: AiItemAction(item) })
     return items
 }
 
@@ -42,7 +45,7 @@ CreateAiLauncher() {
     g.SetFont("s10")
     ; -Hdr で見出しを消す。上下キーはListViewが自前で処理するので、
     ; フォーカスさえ当てておけば移動用のホットキーは要らない。
-    lv := g.Add("ListView", "w440 r16 -Multi -Hdr NoSortHdr", ["名前", "分類"])
+    lv := g.Add("ListView", "w620 r16 -Multi NoSortHdr", ["ファイル名", "説明", "分類"])
     lv.OnEvent("DoubleClick", (*) => RunSelectedAiLauncherItem())
     g.OnEvent("Escape", (*) => CloseAiLauncher())
     g.OnEvent("Close", (*) => CloseAiLauncher())
@@ -59,16 +62,17 @@ ShowAiLauncher() {
     lv.Opt("-Redraw")                   ; 充填中のちらつきを抑える
     lv.Delete()
     for item in _aiLauncherItems
-        lv.Add(, item.label, item.group)
+        lv.Add(, item.name, item.label, item.group)
     lv.Opt("+Redraw")
-    lv.ModifyCol(1, 300)
-    lv.ModifyCol(2, 120)
+    lv.ModifyCol(1, 330)
+    lv.ModifyCol(2, 170)
+    lv.ModifyCol(3, 100)
     if (_aiLauncherItems.Length)
         lv.Modify(1, "Select Focus Vis")
     ; Illustratorの中央に出す
     if (hwnd := WinExist(exe_ai)) {
         WinGetPos(&wx, &wy, &ww, &wh, hwnd)
-        _aiLauncherGui.Show(Format("x{} y{} AutoSize", wx + (ww - 470) // 2, wy + (wh - 420) // 2))
+        _aiLauncherGui.Show(Format("x{} y{} AutoSize", wx + (ww - 650) // 2, wy + (wh - 420) // 2))
     } else {
         _aiLauncherGui.Show("AutoSize Center")
     }
