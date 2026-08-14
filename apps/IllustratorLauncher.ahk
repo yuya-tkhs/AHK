@@ -1,7 +1,8 @@
 ;;
 ;; Illustrator JSXランチャー
 ;;;;
-; Ctrl+Space → Space で開く。上下で選択、Enterで実行、Escapeでキャンセル。
+; 2ストローク（無変換+Space）から Space で開く。
+; 上下で選択、Enterで実行、Escapeでキャンセル。
 ;
 ; ScriptUI（JSX）ではなくAHKのGUIで作っている理由：
 ; ScriptUI製のランチャーは自身がJSXなので多重起動ガード（IsAiScriptRunning）を
