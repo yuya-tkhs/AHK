@@ -24,6 +24,78 @@ global _aiLauncherAll := ""         ; 全項目のキャッシュ（F5で作り�
 ; 列挙から除くフォルダ（相対パスの前方一致）
 global _aiLauncherExclude := ["test\", "あまり使わない\"]
 
+; 最近使ったもの（新しい順）。リロードやPC再起動をまたいで残す。
+; 置き場は A_AppData。リポジトリにもGoogleドライブにも置かないのは、
+; 使用履歴を版管理・同期の対象にしたくないため。
+global _aiMruFile := A_AppData "\AhkJsxLauncher\mru.txt"
+global _aiMruMax := 20
+global _aiMru := ""
+
+AiMru() {
+    global _aiMru
+    if !IsObject(_aiMru)
+        LoadAiMru()
+    return _aiMru
+}
+
+LoadAiMru() {
+    global _aiMru, _aiMruFile
+    _aiMru := []
+    try {
+        for line in StrSplit(FileRead(_aiMruFile, "UTF-8"), "`n", "`r")
+            if (line != "")
+                _aiMru.Push(line)
+    }
+    return _aiMru
+}
+
+; 実行したものを先頭へ持ってくる（既にあれば取り除いてから入れ直す）
+RecordAiMru(name) {
+    global _aiMru, _aiMruFile, _aiMruMax
+    mru := AiMru()
+    for i, v in mru
+        if (v = name) {
+            mru.RemoveAt(i)
+            break
+        }
+    mru.InsertAt(1, name)
+    while (mru.Length > _aiMruMax)
+        mru.Pop()
+    text := ""
+    for v in mru
+        text .= v "`n"
+    try {
+        DirCreate(RegExReplace(_aiMruFile, "\\[^\\]+$"))
+        if FileExist(_aiMruFile)
+            FileDelete(_aiMruFile)
+        FileAppend(text, _aiMruFile, "UTF-8")
+    }
+}
+
+; 最近使ったものを先頭に、残りは元の並びのまま返す。
+; 絞り込みの前にかけるので、検索したときも「最近使ったもの」が上に来る。
+SortByAiMru(items) {
+    mru := AiMru()
+    if (!mru.Length)
+        return items
+    byName := Map()
+    byName.CaseSense := false
+    for item in items
+        if !byName.Has(item.name)
+            byName[item.name] := item
+    out := [], used := Map()
+    used.CaseSense := false
+    for name in mru
+        if (byName.Has(name) && !used.Has(name)) {
+            out.Push(byName[name])
+            used[name] := true
+        }
+    for item in items
+        if !used.Has(item.name)
+            out.Push(item)
+    return out
+}
+
 AiLauncherBase() {
     return "W:\共有ドライブ\wc動画\sync\Assets\adobe-scripts_tkhs\illustrator\"
 }
@@ -109,6 +181,8 @@ CreateAiLauncher() {
     ed.OnEvent("Change", (*) => RefreshAiLauncherList())
     lv := g.Add("ListView", "w620 r16 -Multi NoSortHdr", ["ファイル名", "説明", "分類"])
     lv.OnEvent("DoubleClick", (*) => RunSelectedAiLauncherItem())
+    ; LVS_EX_DOUBLEBUFFER。絞り込みのたびに全行を入れ替えるのでちらつきを抑える
+    try SendMessage(0x1036, 0x10000, 0x10000, lv)
     g.OnEvent("Escape", (*) => CloseAiLauncher())
     g.OnEvent("Close", (*) => CloseAiLauncher())
     _aiLauncherGui := g
@@ -119,7 +193,7 @@ CreateAiLauncher() {
 ; 検索欄の内容で一覧を作り直す
 RefreshAiLauncherList() {
     global _aiLauncherLV, _aiLauncherEdit, _aiLauncherItems
-    _aiLauncherItems := FilterAiLauncherItems(AiLauncherAllItems(), _aiLauncherEdit.Value)
+    _aiLauncherItems := FilterAiLauncherItems(SortByAiMru(AiLauncherAllItems()), _aiLauncherEdit.Value)
     lv := _aiLauncherLV
     lv.Opt("-Redraw")               ; 充填中のちらつきを抑える
     lv.Delete()
@@ -186,6 +260,7 @@ RunSelectedAiLauncherItem() {
     if (!row || row > _aiLauncherItems.Length)
         return
     item := _aiLauncherItems[row]
+    RecordAiMru(item.name)          ; 次に開いたとき先頭に出す
     CloseAiLauncher()
     ; アクティブ化が終わってから起動する。終わる前にJSXが走ると
     ; ダイアログがIllustratorの背面に出たりフォーカスを得られないため。
