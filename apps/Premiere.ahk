@@ -41,6 +41,7 @@ vk1D & Space:: {
     d: 空のトラックを削除
     f: クリップを全長に
     h: 再生ヘッド位置を自動選択
+    t: オーディオユニット時間の切り替え
     r: トラックロック
     R: トラックリリース
     2: トラック名の変更
@@ -70,6 +71,7 @@ vk1D & Space:: {
         case "h":
             Send("!s")  ; Alt+S でシーケンスメニューを開く
             Send("p")   ; P で再生ヘッド位置を自動選択
+        case "t":      Send("+^!t")  ; Premiere側に割り当てたオーディオユニット時間の切り替え
         case "2":      JsxRun("リネーム.jsx")
         case "a":      JsxRun("位置アンカー変更.jsx")
         default:       MyTooltip("無効なキーです", 500)
