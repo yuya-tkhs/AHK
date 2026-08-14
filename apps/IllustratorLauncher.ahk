@@ -21,8 +21,11 @@ global _aiLauncherEdit := ""
 global _aiLauncherItems := []       ; いま一覧に出ている項目（絞り込み後）
 global _aiLauncherAll := ""         ; 全項目のキャッシュ（F5で作り直す）
 
-; 列挙から除くフォルダ（相対パスの前方一致）
-global _aiLauncherExclude := ["test\", "あまり使わない\"]
+; 一覧に出さないフォルダ（相対パスの前方一致）
+global _aiLauncherExclude := ["test\"]
+; 検索したときだけ出すフォルダ。既定の一覧を短く保ちつつ、
+; 名前を覚えていれば呼べる状態にしておくため。
+global _aiLauncherSearchOnly := ["あまり使わない\"]
 
 ; 最近使ったもの（新しい順）。リロードやPC再起動をまたいで残す。
 ; 置き場は A_AppData。リポジトリにもGoogleドライブにも置かないのは、
@@ -100,12 +103,19 @@ AiLauncherBase() {
     return "W:\共有ドライブ\wc動画\sync\Assets\adobe-scripts_tkhs\illustrator\"
 }
 
-AiLauncherExcluded(rel) {
-    global _aiLauncherExclude
-    for prefix in _aiLauncherExclude
+AiLauncherMatchesFolder(rel, prefixes) {
+    for prefix in prefixes
         if (SubStr(rel, 1, StrLen(prefix)) = prefix)    ; = は大文字小文字を区別しない
             return true
     return false
+}
+AiLauncherExcluded(rel) {
+    global _aiLauncherExclude
+    return AiLauncherMatchesFolder(rel, _aiLauncherExclude)
+}
+AiLauncherSearchOnly(rel) {
+    global _aiLauncherSearchOnly
+    return AiLauncherMatchesFolder(rel, _aiLauncherSearchOnly)
 }
 
 ; 一覧を作る。
@@ -130,8 +140,9 @@ BuildAiLauncherItems() {
         if (AiLauncherExcluded(rel) || seen.Has(rel))
             continue
         seen[rel] := true
-        items.Push({ name: rel, label: "", group: "その他"
-                   , action: RunAiScriptAsync.Bind(rel) })
+        searchOnly := AiLauncherSearchOnly(rel)
+        items.Push({ name: rel, label: "", group: searchOnly ? "あまり使わない" : "その他"
+                   , searchOnly: searchOnly, action: RunAiScriptAsync.Bind(rel) })
     }
     return items
 }
@@ -146,12 +157,16 @@ AiLauncherAllItems(refresh := false) {
 
 ; 空白区切りのAND検索。ファイル名・説明・分類のどれかに含まれれば残す。
 ; InStr は既定で大文字小文字を区別しないので、半角でそのまま打てる。
+; 検索欄が空のときは searchOnly の項目（あまり使わないフォルダ）を伏せる。
 FilterAiLauncherItems(items, query) {
     query := Trim(query)
-    if (query = "")
-        return items
     out := []
     for item in items {
+        if (query = "") {
+            if !(item.HasOwnProp("searchOnly") && item.searchOnly)
+                out.Push(item)
+            continue
+        }
         hay := item.name " " item.label " " item.group
         ok := true
         for term in StrSplit(query, " ") {

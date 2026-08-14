@@ -1,44 +1,6 @@
 ;;
 ;; Illustrator
 ;;;;
-; 使用するSppyの実行ファイルパス（このパス以外のSppyは別物として扱う）
-global SppyExe := "W:\マイドライブ\Programming\Sppy_1_5\Sppy_1_5.exe"
-
-; 10秒ごとにチェックを開始（ミリ秒指定）
-SetTimer(CheckIllustrator, 10000)
-CheckIllustrator() {
-    global SppyExe
-    static verifiedPid := 0
-    if !ProcessExist("Illustrator.exe")
-        return
-    ; 実行パスを確認できたPIDが生きている間は、WMIを叩かずここで抜ける。
-    ; WMIクエリは実測125〜141msかかり、その間AHK全体が止まる。
-    ; 素通りさせるとIllustrator起動中はずっと10秒ごとに固まることになるため。
-    ; （ProcessExist(pid)は実測0〜16ms）
-    if (verifiedPid && ProcessExist(verifiedPid))
-        return
-    verifiedPid := 0
-    ; プロセス名ではなく実行パスで判定する。
-    ; 共有ドライブ版など別パスのSppyが動いていたら終了し、マイドライブ版に差し替える。
-    correctRunning := false
-    wrongPids := []
-    query := ComObjGet("winmgmts:").ExecQuery("SELECT ProcessId, ExecutablePath FROM Win32_Process WHERE Name = 'Sppy_1_5.exe'")
-    for proc in query {
-        if (proc.ExecutablePath = SppyExe) {
-            correctRunning := true
-            verifiedPid := proc.ProcessId   ; 次回以降はこのPIDの生死だけ見る
-        } else {
-            wrongPids.Push(proc.ProcessId)
-        }
-    }
-    if correctRunning
-        return
-    for pid in wrongPids
-        ProcessClose(pid)
-    Run(SppyExe, , , &newPid)
-    verifiedPid := newPid
-}
-
 ; jsxを別AHKプロセスで非同期起動する。
 ; DoJavaScriptFileのブロックを子プロセスに肩代わりさせ、本体をフリーズさせない。
 global _aiChildPid := 0
@@ -76,7 +38,7 @@ LaunchAiChild(childArgs, displayName) {
 
 ; Illustratorのメニューコマンドを実行する（整列など）。
 ; これらはJSXファイルが存在しないメニュー項目なので、共有ドライブにファイルを
-; 作らず DoJavaScript で直接叩く。コマンド名はSppyの設定にあったものと同じ。
+; 作らず DoJavaScript で直接叩く。コマンド名はIllustratorのメニューコマンド名。
 ; JS側の引用符はシングルにする（コマンドラインの二重引用符と衝突させないため）。
 RunAiMenuCommand(command, displayName) {
     js := "app.executeMenuCommand('" command "')"
@@ -156,6 +118,10 @@ AiResultPoll() {
 ; Alt+Enter → MultiEditText.jsx 起動（非同期・表示中は日本語入力ON）
 !Enter:: RunAiScriptAsync("MultiEditText.jsx", "Multi-edit Text")
 
+; 次／前のアートボードを表示して中身を全選択する
++PgDn:: RunAiScriptAsync("display_next_artboard_and_select_all.jsx")
++PgUp:: RunAiScriptAsync("display_prev_artboard_and_select_all.jsx")
+
 ; MultiEditTextダイアログ表示中のみ Ctrl+Enter を上書き。
 ; 画像でOKボタンを探してクリックし、カーソルを元の位置へ戻す。
 #HotIf WinActive("Multi-edit Text")
@@ -200,7 +166,7 @@ global AiMenu := [
     { key: "o", label: "オブジェクト", items: [
         { key: "t", label: "テキストプロパティエディタ", direct: true, jsx: "text_property_editor.jsx" },
         { key: "g", label: "位置・サイズ", direct: true, jsx: "xywh_input.jsx" } ] },
-    ; 整列はIllustratorのメニューコマンド（JSXは存在しない）。割り当てはSppyと同じ
+    ; 整列はIllustratorのメニューコマンド（JSXは存在しない）
     { key: "a", label: "整列", items: [
         { key: "Left",  disp: "←", label: "左に整列", menucmd: "Horizontal Align Left" },
         { key: "Right", disp: "→", label: "右に整列", menucmd: "Horizontal Align Right" },
@@ -208,7 +174,7 @@ global AiMenu := [
         { key: "Down",  disp: "↓", label: "下に整列", menucmd: "Vertical Align Bottom" },
         { key: "c", label: "水平方向中央に整列", menucmd: "Horizontal Align Center" },
         { key: "m", label: "垂直方向中央に整列", menucmd: "Vertical Align Center" } ] },
-    ; 文字揃えは sttk3 製のJSX。Sppyで実際に使っていた3つだけ載せる
+    ; 文字揃えは sttk3 製のJSX。よく使う3つだけ第3打鍵に載せる（残りはランチャーから）
     { key: "j", label: "文字揃え", items: [
         { key: "Left",  disp: "←", label: "左揃え",   jsx: "sttk3-changeJustification\justification=left.jsx" },
         { key: "Right", disp: "→", label: "右揃え",   jsx: "sttk3-changeJustification\justification=right.jsx" },

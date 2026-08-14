@@ -12,7 +12,8 @@ apps/
   Common.ahk               # グローバルホットキー・2ストロークコマンド・クリップボード監視
   Explorer.ahk             # エクスプローラー／ファイルダイアログ拡張
   Premiere.ahk             # Adobe Premiere Pro ホットキー
-  Illustrator.ahk          # Illustrator ホットキー・Sppy_1_5 常駐監視・JSX連携
+  Illustrator.ahk          # Illustrator ホットキー・3ストローク・JSX連携
+  IllustratorLauncher.ahk  # JSXを一覧から選んで実行するランチャー
   AdobeCommon.ahk          # Adobe共通の Ctrl+Enter 後処理をアプリ別に振り分け
 lib/
   Functions.ahk            # 共通関数（MyTooltip, WrapText, IsUrl, CleanUrl, ClickImageAndReturn）
@@ -67,12 +68,20 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 - **矢印のように文字にならないキーは `InputHook` の `EndKey` にしないと拾えない。** `BuildAiEndKeys()` が項目キーの文字数（2文字以上＝特殊キー）から自動で組み立てる
 - `ReadAiMenuKey()` は**ツールチップを描く前にフックを張る**。`Wait()` が返ってから次の `Start()` までの隙間に押されたキーはIllustratorへ素通りし、単キーがツール切替に化けるため
 
+### Illustrator の単独ホットキー（apps/Illustrator.ahk）
+
+| キー | 動作 |
+|------|------|
+| `Alt + Enter` | MultiEditText.jsx（表示中は日本語入力ON） |
+| `Shift + PgDn` | 次のアートボードを表示して全選択 |
+| `Shift + PgUp` | 前のアートボードを表示して全選択 |
+
 ### JSXランチャー（apps/IllustratorLauncher.ahk）
 
 Illustrator の2ストロークから `Space` で開く。文字入力で絞り込み、`↑↓` で選択、`Enter` で実行、`Escape` でキャンセル、`F5` で一覧を再構築する。
 
 - 一覧は `AiMenu`（日本語ラベル付きの手書き定義）を先に並べ、続いてJSXフォルダを再帰列挙して `AiMenu` に無いものだけを足す。重複は相対パスで排除する
-- 除外フォルダは `_aiLauncherExclude`（`test\` / `あまり使わない\`）の前方一致
+- `_aiLauncherExclude`（`test\`）は常に一覧に出さない。`_aiLauncherSearchOnly`（`あまり使わない\`）は**検索したときだけ**出す。既定の一覧を短く保ちつつ、名前を覚えていれば呼べる状態にしておくため。どちらも相対パスの前方一致
 - 1列目はファイル名。半角のまま検索でき、ラベルを持たない列挙分とも表記が揃うため日本語ラベルより優先する。整列などメニューコマンドはコマンド名を出す
 - 再帰列挙は実測16ms（キャッシュ後0ms）。Googleドライブ上でも問題にならない
 - **ScriptUIで作ってはいけない。** ランチャー自身がJSXになるため多重起動ガード（`IsAiScriptRunning()`）を占有し続け、パネルを開いている間そこから何も起動できなくなる。表示中はIllustrator本体もブロックされる
@@ -132,14 +141,14 @@ Illustrator の2ストロークから `Space` で開く。文字入力で絞り�
 
 ### Illustrator の JSX 連携（apps/Illustrator.ahk）
 
-- `RunAiMenuCommand()` は **JSXが存在しないIllustratorのメニューコマンド**（整列など）を実行する。`lib/run_ai_script.ahk` に `--code` を渡し、子プロセスが `DoJavaScript`（文字列実行）で `app.executeMenuCommand('...')` を叩く。共有ドライブにJSXファイルを作らずに済ませるため。コマンド名は Sppy の `HotkeySet.txt` の `<AIMENU>` 行と同じものが使える。**JS側の引用符はシングルにする**（コマンドラインの二重引用符と衝突するため）
+- `RunAiMenuCommand()` は **JSXが存在しないIllustratorのメニューコマンド**（整列など）を実行する。`lib/run_ai_script.ahk` に `--code` を渡し、子プロセスが `DoJavaScript`（文字列実行）で `app.executeMenuCommand('...')` を叩く。共有ドライブにJSXファイルを作らずに済ませるため。コマンド名はIllustratorのメニューコマンド名（`Horizontal Align Left` など）。**JS側の引用符はシングルにする**（コマンドラインの二重引用符と衝突するため）
 - JSXの起動はすべて `RunAiScriptAsync()` を通す。`lib/run_ai_script.ahk` を別プロセスで起動するので、ダイアログ表示中も本体がフリーズしない。COMで同期実行する版（`AiScript()`）はJSXが終わるまでホットキーが全部止まるため廃止した（追加コストは実測約30msしかなく、同期版を選ぶ理由がない）
 - `RunAiScriptWithTooltip()` は完了通知をダイアログではなく `%TEMP%\ai_jsx_result.txt` 経由で受け取り `MyTooltip()` に出す。JSX側は `.tmp` に書いてから rename するので書きかけを読むことはない。**エンコーディングは JSX 側 `File.encoding`・AHK 側 `FileRead` とも `UTF-8` を明示する**（ExtendScript の既定は日本語Windowsでは Shift-JIS で、日本語のパスが化ける）。監視の停止条件は ①結果ファイル発見 ②子プロセス消滅＋猶予2回 ③絶対タイムアウト600秒 の3つ。②があるのでキャンセルやエラーで結果が書かれなくても確実に止まる
 - ダイアログを出さない方式にしたのは、書き出しに時間がかかる間に待ちきれず押したEnterが、ダイアログがまだ無いためIllustrator本体に吸われて消え、結局押し直しになっていたため。確定操作そのものを不要にした
-- **この方式のJSXをAHK以外（Illustratorのスクリプトメニュー、Sppy等）から直接実行すると、完了通知が一切出ない**（結果は読み手のいない `%TEMP%` に書かれる）。JSXは共有ドライブにあり版管理外なので、他の人が使う可能性があるなら注意する
+- **この方式のJSXをAHK以外（Illustratorのスクリプトメニュー等）から直接実行すると、完了通知が一切出ない**（結果は読み手のいない `%TEMP%` に書かれる）。JSXは共有ドライブにあり版管理外なので、他の人が使う可能性があるなら注意する
 - ScriptUI（JSXの `new Window`）は標準のWin32コントロールを使わないため、**`WinGetText()` では中身が取れない**（実測確認済み・空が返る）。ダイアログ内のファイル名や保存先をAHK側で読むことはできないので、必要ならJSXにパスをファイル出力させてそれを読む
 - ScriptUIのダイアログは `WinActivate` してから `Send("{Enter}")` で閉じられる（OKボタンが反応する。実測確認済み）。ただし `SetTitleMatchMode(2)` は部分一致なので、タイトル指定でEnterを送る処理を書くときは無関係のウィンドウに当たらないか確認すること
-- Sppy_1_5 は10秒ごとに判定するが、実行パスを確認できたPIDが生きている間は `ProcessExist(pid)` だけで抜ける。WMIクエリ（`Win32_Process`）は実測125〜141msかかり、その間AHK全体が止まるため、毎回叩くとIllustrator起動中は10秒ごとに固まる
+- WMIクエリ（`ComObjGet("winmgmts:")` の `Win32_Process` など）は実測125〜141msかかり、その間AHK全体が止まる。定期実行の中で毎回叩かないこと（かつてSppyの常駐監視で10秒ごとに叩いており、体感できる引っかかりの原因になっていた）
 - 2ストロークの `switch` の前で `KeyWait` しない。Illustratorのcaseはどれも `Send` を使わないので衝突を避ける必要がなく、待つとキーを離すまでJSXの起動が始まらないため（`Common.ahk` 側は `Send` を使うので必要）
 
 ### 無変換（vk1D）の同時押し（apps/Common.ahk）
@@ -192,7 +201,7 @@ Illustrator の2ストロークから `Space` で開く。文字入力で絞り�
 - **`#SingleInstance Force` は旧インスタンスの置き換えに失敗することがある。** 実際に11時間前の残骸と併存していた事例がある（どちらも `/restart` 付き＝`Reload` 由来）
 - 二重常駐すると `~` 付き（非抑制）のホットキーが**両方のインスタンスで発火する**。2ストロークでは InputHook が2本待機し、選択キーは片方が捕捉して抑制するため、**もう片方は待機したまま取り残されて後から押したキーを横取りする**。ダイアログ表示中の Enter が「無効なキーです」に化け、しかもその Enter は抑制されてダイアログにも届かない
 - 一度複製すると、以後の `Reload` はフック先頭の1プロセスしか更新しないため**複製状態が自己永続する**（古いコードのまま動き続ける残骸も残る）
-- 対策として `KillDuplicateInstances()`（lib/Functions.ahk）を `yuya_allways.ahk` の冒頭で呼ぶ。メインウィンドウのタイトルが `<スクリプトのフルパス> - AutoHotkey v2.0.x` 形式なので前方一致で判定でき、他のスクリプトやコンパイル済みexe（Sppy等）には当たらない。応答不能な残骸でも確実に落とすため `ProcessClose` を使う
+- 対策として `KillDuplicateInstances()`（lib/Functions.ahk）を `yuya_allways.ahk` の冒頭で呼ぶ。メインウィンドウのタイトルが `<スクリプトのフルパス> - AutoHotkey v2.0.x` 形式なので前方一致で判定でき、他のスクリプトやコンパイル済みexeには当たらない。応答不能な残骸でも確実に落とすため `ProcessClose` を使う
 - 常駐数の確認方法：`Get-CimInstance Win32_Process -Filter "Name LIKE '%AutoHotkey%'" | Select ProcessId, CommandLine`
 
 ### 構文チェック
