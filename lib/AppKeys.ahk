@@ -11,6 +11,10 @@
 ;;   / VSCode
 ;;   デフォルト                 表示縮小 ^-  表示拡大 ^+  +{Tab}         {Tab}
 ;;
+;; Shift 等と一緒に押すと、上の表のキーにその修飾キーが重なって送られる
+;; （Shift+F21 → ^+z ＝やり直し、Adobe系の Shift+F19 → +{Down} など）。
+;; Win を押しながらだと Win+{Down} のようにOS側のショートカットになる点に注意。
+;;
 ;; #HotIf を並べず1か所で分岐しているのは、AdobeCommon.ahk の OnCtrlEnterPost() と同じ理由。
 ;; 「デフォルト＋例外」という優先順位がコード上で一目で分かるため。
 ;;;;
@@ -18,20 +22,28 @@
 ; $ を付けてキーボードフック経由にする。
 ; 付けないと環境によっては F19〜F22 自体がアプリに届いてしまい、
 ; ショートカットと元のキーの両方が送られたように見える。
-$F19:: AppKey( "F19" )
-$F20:: AppKey( "F20" )
-$F21:: AppKey( "F21" )
-$F22:: AppKey( "F22" )
+;
+; * を付けるのは Shift 等と組み合わせて押せるようにするため。
+; 修飾キー無しの定義（$F19::）は完全一致を要求するので、Shiftを押していると
+; 発火せず素の F19 がアプリへ流れてしまう。
+; 受けたあとは Send 側の {Blind} が押されている修飾キーをそのまま重ねる
+; （Shift+F21 → ^+z ＝やり直し、Adobe系の Shift+F19 → +{Down} など）。
+$*F19:: AppKey( "F19" )
+$*F20:: AppKey( "F20" )
+$*F21:: AppKey( "F21" )
+$*F22:: AppKey( "F22" )
 
 AppKey( key ) {
     ; Adobe系：4キーすべて専用の割り当て
     ; Tab / Shift+Tab はどのAdobeアプリでもパネルの表示切り替えで共通
+    ; 送るキーはすべて {Blind} 付き。押されている修飾キーを解除せずに重ねるため
+    ; （{Blind} が無いと、AHKが送信前に物理的な Shift 等を打ち消してしまう）
     if IsAdobeApp() {
         switch key {
-            case "F19": Send( "{Down}" )
-            case "F20": Send( "{Up}" )
-            case "F21": Send( "+{Tab}" )
-            case "F22": Send( "{Tab}" )
+            case "F19": Send( "{Blind}{Down}" )
+            case "F20": Send( "{Blind}{Up}" )
+            case "F21": Send( "{Blind}+{Tab}" )
+            case "F22": Send( "{Blind}{Tab}" )
         }
         return
     }
@@ -39,7 +51,7 @@ AppKey( key ) {
     ; F19/F20（表示倍率）はアプリを問わず共通。
     ; ^+ は Ctrl+Shift と解釈されるため、+ は必ず {} で囲む。
     if ( key = "F19" || key = "F20" ) {
-        Send( key = "F19" ? "^-" : "^{+}" )
+        Send( key = "F19" ? "{Blind}^-" : "{Blind}^{+}" )
         return
     }
 
@@ -58,19 +70,19 @@ AppKey( key ) {
     }
     ; タブを持つアプリ：タブ切り替え
     if IsTabSwitchApp() {
-        Send( key = "F21" ? "^+{Tab}" : "^{Tab}" )
+        Send( key = "F21" ? "{Blind}^+{Tab}" : "{Blind}^{Tab}" )
         return
     }
     ; デフォルト：素の Tab / Shift+Tab（フォーカス移動・パネル送り）
-    Send( key = "F21" ? "+{Tab}" : "{Tab}" )
+    Send( key = "F21" ? "{Blind}+{Tab}" : "{Blind}{Tab}" )
 }
 
 ; 元に戻す／やり直しを送る。メモ帳だけ ^+z が効かないため ^y にする。
 SendUndoRedo( key ) {
     if WinActive( exe_notepad )
-        Send( key = "F21" ? "^z" : "^y" )
+        Send( key = "F21" ? "{Blind}^z" : "{Blind}^y" )
     else
-        Send( key = "F21" ? "^z" : "^+z" )
+        Send( key = "F21" ? "{Blind}^z" : "{Blind}^+z" )
 }
 
 ; 日本語入力（IME）がONかどうか＝長文を書いている最中かの判断に使う。
