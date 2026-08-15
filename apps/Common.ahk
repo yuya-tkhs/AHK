@@ -59,19 +59,11 @@ vk1D & BS::  Send("+{Home}{BS}") ;;前方削除（行頭まで）
 vk1D & Del:: Send("+{End}{BS}")  ;;後方削除（行末まで）
 +^BS::       Send("{Home}+{End}+{Right}{BS}") ;;行削除
 
-; 短時間に2回Escを押したら無変換（半角英数）を送る
+; Escを押したら無変換（半角英数）を送る
 ; 「~」を付けてEsc自体は素通しさせるため、各アプリ本来のEsc動作はそのまま残る
-; 2ストローク待機中はInputHookがEscを横取りするのでここは発火しない（キャンセル動作が優先される）
-~Esc:: {
-    static lastPress := 0
-    static THRESHOLD := 400     ; 2回目とみなす間隔（ミリ秒）
-    if (A_TickCount - lastPress <= THRESHOLD) {
-        lastPress := 0          ; 3回目が次の組の1回目にならないようリセット
-        Send("{vk1D}")
-    } else {
-        lastPress := A_TickCount
-    }
-}
+; 2ストローク待機中もここは発火する（「~」付きはキーを抑制しないのでInputHookにも同じEscが届く）。
+; ただしEndKeyのEscが先に確定するので、送った無変換がメニューの選択キーに化けることはない（実測確認済み）
+~Esc:: Send("{vk1D}")
 
 ; スタックした修飾キーを自動検出・解除する関数
 ; 「論理状態ON・物理状態OFF」= ユーザーが押していないのにOSが押下中と認識している状態をスタックとみなす
