@@ -1,7 +1,7 @@
 ;;
 ;; Illustrator JSXランチャー
 ;;;;
-; 2ストローク（無変換+Space）から Space で開く。
+; 2ストローク（Ctrl+Space）から Space で開く。
 ; 文字入力で絞り込み、上下で選択、Enterで実行、Escapeでキャンセル、F5で再列挙。
 ;
 ; ScriptUI（JSX）ではなくAHKのGUIで作っている理由：

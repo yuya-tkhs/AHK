@@ -42,13 +42,13 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 | 対象 | トリガー | 備考 |
 |------|----------|------|
-| グローバル（Common.ahk） | `Win + Space` | メニュー表示5秒／入力待ち2秒。Windows標準の入力方式切り替えを上書きする |
-| Explorer（Explorer.ahk） | `vk1D + Space` | ファイルダイアログでも有効（`IsFileDialog()`で判定） |
-| Premiere（Premiere.ahk） | `vk1D + Space` | ファイルダイアログ中は無効 |
-| Illustrator（Illustrator.ahk） | `vk1D + Space` | **3ストローク対応**（下記） |
+| グローバル（Common.ahk） | `vk1D + Space` | メニュー表示5秒／入力待ち2秒 |
+| Explorer（Explorer.ahk） | `Ctrl + Space` | ファイルダイアログでも有効（`IsFileDialog()`で判定） |
+| Premiere（Premiere.ahk） | `Ctrl + Space` | ファイルダイアログ中は無効 |
+| Illustrator（Illustrator.ahk） | `Ctrl + Space` | 0.3秒以内の短押しのみ起動。長押しはAiにそのまま渡す。**3ストローク対応**（下記） |
 
-- アプリ別の3つは `vk1D & Space` を `#HotIf` の異なる文脈で定義した別バリアント。どのアプリにも当てはまらないときは何も起きない（グローバルの `Win + Space` とは別系統）
-- グローバル側は `switch` の前で `KeyWait("LWin")` / `KeyWait("RWin")` を挟む。トリガーのWinを押したままだと `Send` の修飾キー状態が狂い、特に `f` の `{LWin}` 単独送出が効かなくなるため
+- Illustrator で短押し判定を入れているのは、`Ctrl + Space` がAi本来のズームツールのため。長押しはそのままAiへ通す
+- **グローバルとアプリ別を `Win + Space` ／ `vk1D + Space` に入れ替えたことがあるが、使い勝手が良くないため元に戻した**（2026-08-15）。Win+Space はWindows標準の入力方式切り替えと衝突する
 
 #### Illustrator の3ストローク
 

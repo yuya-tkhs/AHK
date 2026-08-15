@@ -30,7 +30,7 @@ OnCtrlEnterPremiere() {
 ^vk1C:: Send("{vk1C}^![^!{Enter}")
 
 ; 2ストローク
-vk1D & Space:: {
+^Space:: {
     MyTooltip("
     (
     2ストローク待機中（5秒）

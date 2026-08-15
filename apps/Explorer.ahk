@@ -1,7 +1,7 @@
 #HotIf WinActive("ahk_class CabinetWClass") or IsFileDialog()
 
 ; 2ストローク
-vk1D & Space:: {
+^Space:: {
     MyTooltip("
     (
     2ストローク待機中（5秒）

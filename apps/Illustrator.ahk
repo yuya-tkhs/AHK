@@ -294,10 +294,18 @@ RunAiMenuItem(key, group := "") {
         MyTooltip("無効なキーです", 500)
 }
 
-; 2ストローク
-; 旧トリガーの Ctrl+Space はIllustrator本来のズームツールなので、0.3秒の短押し判定で
-; 長押しだけをAiへ通していた。無変換+Space はAi側に割り当てが無いのでその判定は不要。
-vk1D & Space:: {
+; 2ストローク（0.3秒以内の短押しのみ起動・長押しはIllustratorにそのまま渡す）
+$~^Space:: {
+    static inLongPress := false
+    if inLongPress  ; キーリピート中 → スキップ
+        return
+    KeyWait("Space", "T0.3")
+    if GetKeyState("Space", "P") {  ; まだ押されている = 長押し確定
+        inLongPress := true
+        KeyWait("Space")            ; 離されるまで待機してフラグをリセット
+        inLongPress := false
+        return
+    }
     ; Common.ahk と違い、ここでは選択キーが離されるのを待たない。
     ; どの項目も Send を使わず JSX を起動するだけなので「Sendと物理キーの衝突」を
     ; 避ける必要がなく、待つとキーを離すまでJSXの起動が始まらない＝ダイアログが
