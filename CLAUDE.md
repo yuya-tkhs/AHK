@@ -11,6 +11,7 @@ startup_manager_home.ahk   # 同上（自宅用・TVClock追加）
 apps/
   Common.ahk               # グローバルホットキー・2ストロークコマンド・クリップボード監視
   Explorer.ahk             # エクスプローラー／ファイルダイアログ拡張
+  ShortcutList.ahk         # ショートカット一覧（グローバル2ストロークの k）
   Premiere.ahk             # Adobe Premiere Pro ホットキー
   Illustrator.ahk          # Illustrator ホットキー・3ストローク・JSX連携
   IllustratorLauncher.ahk  # JSXを一覧から選んで実行するランチャー
@@ -102,6 +103,18 @@ Illustrator の2ストロークから `Space` で開く。文字入力で絞り�
 - AHKのGUIはIllustratorからフォーカスを奪うが、**実行・キャンセルの直前に必ず `Hide()` → `WinActivate(exe_ai)` → `WinWaitActive` を通す**。アクティブ化の完了を待たずにJSXを起動すると、ダイアログが背面に出たりフォーカスを得られない。この往復でIllustratorの選択状態は失われない（実測確認済み）
 - `Enter` / `↑↓` / `F5` は `HotIf AiLauncherActive` でランチャー表示中だけ有効にする。検索欄にフォーカスがあるため、上下は横取りしないとListViewへ届かない。`~` を付けないのは二重常駐時に両インスタンスで発火させないため
 - 最近使ったものを先頭に出す（MRU・上限20件）。保存先は `%APPDATA%\AhkJsxLauncher\mru.txt`。リポジトリにもGoogleドライブにも置かないのは、使用履歴を版管理・同期の対象にしたくないため。並べ替えは絞り込みの**前**にかけるので、検索したときも最近使ったものが上に来る
+
+### ショートカット一覧（apps/ShortcutList.ahk）
+
+グローバル2ストローク（`無変換 + Space`）の `k` で開く。`Esc` で閉じるまで出しっぱなし（もう一度 `k` でも閉じる）。
+
+- 2ストロークの中身は `GlobalMenuText()` / `ExplorerMenuText()` / `PremiereMenuText()` と `AiMenu` から組み立てる。**一覧に書き写すとメニューを直したときに一覧だけ古くなる**ため。3つのメニュー文字列は、この一覧が読めるようホットキー本体から関数へ切り出した
+- 単独ホットキーだけはコードから機械的に取り出せないので `ShortcutList.ahk` に手書きする。増やしたらここも足す
+- `MenuTextRows()` はメニュー文字列から「キー: 説明」の行だけ拾い、見出しと区切り線は落とす
+- アプリ固有の欄は**開いた時点でアクティブだったアプリ**のものだけ出す。GUIを出すとフォーカスが移るので、判定（`ActiveShortcutApp()`）は必ず `Show` の前に済ませる
+- ツールチップではなくGUIにしたのは、タイムアウト無しのツールチップは他の表示を邪魔し続けること、2列に組めず縦に長くなりすぎることの2点から
+- キーと説明は行ごとではなく**列ごとに1つの `Text`** にまとめる（コントロール数を増やさずに桁がそろう）。次のセクションのyは `GetPos()` で実測した高さから決める。行数×決め打ちだと折り返しで崩れるため
+- 閉じたら元のウィンドウへ `WinActivate` で戻す（JSXランチャーと同じ理由）
 
 ### F19〜F22 のアプリ別割り当て（lib/AppKeys.ahk）
 

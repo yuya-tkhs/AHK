@@ -1,8 +1,8 @@
 #HotIf WinActive("ahk_class CabinetWClass") or IsFileDialog()
 
-; 2ストローク
-^Space:: {
-    MyTooltip("
+; メニューの文言は関数にまとめる（ShortcutList.ahk がこの文字列を読んで一覧に並べる）
+ExplorerMenuText() {
+    return "
     (
     2ストローク待機中（5秒）
     - - - - - - - - - - - - - - - -
@@ -16,7 +16,12 @@
     - - - - - - - - - - - - - - - -
     1: 動画フォルダの作成
     2: Original, Proxy
-    )", 5000)
+    )"
+}
+
+; 2ストローク
+^Space:: {
+    MyTooltip(ExplorerMenuText(), 5000)
     ih := InputHook("L1 T5") ; 次の1文字を待機 (L1: 1文字入力で終了, T2: 2秒でタイムアウト)
     ih.KeyOpt("{Escape}{Space}", "E")
     ih.Start()

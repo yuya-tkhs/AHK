@@ -1,5 +1,7 @@
-vk1D & Space:: {
-    MyTooltip("
+; メニューの文言は関数にまとめる。ショートカット一覧（ShortcutList.ahk）が
+; この文字列をそのまま読んで並べるので、ここを直せば一覧も追随する。
+GlobalMenuText() {
+    return "
     (
     2ストローク待機中（5秒）
     - - - - - - - - - - - - - - - -
@@ -11,8 +13,13 @@ vk1D & Space:: {
     x: Windows Menu
     h: 音声入力
     a: オーディオ切り替え
+    k: ショートカット一覧
     r: Reload
-    )", 5000)
+    )"
+}
+
+vk1D & Space:: {
+    MyTooltip(GlobalMenuText(), 5000)
     ih := InputHook("L1 T2") ; 次の1文字を待機 (L1: 1文字入力で終了, T2: 2秒でタイムアウト)
     ih.KeyOpt("{Space}{Escape}{vk1D}{Numpad5}{NumpadEnter}", "E")
     ih.Start()
@@ -37,6 +44,7 @@ vk1D & Space:: {
         case "c":          Send("#+c")
         case "h":          Send("#h")             ; Windows 音声入力
         case "a":          Send("#^v")            ; オーディオ出力先の切り替え
+        case "k":          ShowShortcutList()     ; Escで閉じるまで出しっぱなし
         default:           MyTooltip("無効なキーです", 500)
     }
 }

@@ -29,9 +29,9 @@ OnCtrlEnterPremiere() {
 ; グラフィックステキストを編集
 ^vk1C:: Send("{vk1C}^![^!{Enter}")
 
-; 2ストローク
-^Space:: {
-    MyTooltip("
+; メニューの文言は関数にまとめる（ShortcutList.ahk がこの文字列を読んで一覧に並べる）
+PremiereMenuText() {
+    return "
     (
     2ストローク待機中（5秒）
     - - - - - - - - - - - - - - - -
@@ -46,7 +46,12 @@ OnCtrlEnterPremiere() {
     r: トラックロック
     R: トラックリリース
     2: トラック名の変更
-    )", 5000)
+    )"
+}
+
+; 2ストローク
+^Space:: {
+    MyTooltip(PremiereMenuText(), 5000)
     ih := InputHook("L1 T5") ; 次の1文字を待機 (L1: 1文字入力で終了, T2: 2秒でタイムアウト)
     ih.KeyOpt("{Escape}{Space}", "E")
     ih.Start()
