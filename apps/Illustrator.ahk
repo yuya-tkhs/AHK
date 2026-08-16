@@ -145,7 +145,7 @@ AiResultPoll() {
 ; e / E は大文字小文字で別コマンド。照合は「==」で行う（「=」は区別しない）。
 ; グループの key は第2打鍵でサブメニューへ降りるためのもの。
 ; direct: true の項目は第2打鍵だけでも起動できる（第1階層のメニューにも並ぶ）。
-; アートボード系は全て b 経由。書き出しとオブジェクトは直接キーも残してある。
+; アートボード系は全て a 経由。書き出しとオブジェクトは直接キーも残してある。
 ; 今後増やすものは原則サブメニュー側へ足し、頻用になったら direct を付けて昇格させる。
 ; disp は表示用（矢印キーは "Left" ではなく "←" と出す）。
 ; 矢印のような複数文字のキーは InputHook の EndKey に自動で加えられる。
@@ -154,7 +154,7 @@ AiResultPoll() {
 ; ランチャーにファイル名を出せないため、定義側に素の値で置く。
 ; tooltip: true の項目だけ完了通知を結果ファイル経由で受け取る。
 global AiMenu := [
-    { key: "b", label: "アートボード", items: [
+    { key: "a", label: "アートボード", items: [
         { key: "f", label: "移動",               jsx: "go_to_artboard.jsx" },
         { key: "a", label: "追加",               jsx: "add_new_artboard.jsx" },
         { key: "s", label: "中身を後ろへずらす", jsx: "shift_artboard_contents.jsx" },
@@ -167,7 +167,7 @@ global AiMenu := [
         { key: "t", label: "テキストプロパティエディタ", direct: true, jsx: "text_property_editor.jsx" },
         { key: "g", label: "位置・サイズ", direct: true, jsx: "xywh_input.jsx" } ] },
     ; 整列はIllustratorのメニューコマンド（JSXは存在しない）
-    { key: "a", label: "整列", items: [
+    { key: "s", label: "整列", items: [
         { key: "Left",  disp: "←", label: "左に整列", menucmd: "Horizontal Align Left" },
         { key: "Right", disp: "→", label: "右に整列", menucmd: "Horizontal Align Right" },
         { key: "Up",    disp: "↑", label: "上に整列", menucmd: "Vertical Align Top" },
@@ -204,16 +204,19 @@ AiItemIsDirect(item) {
     return item.HasOwnProp("direct") && item.direct
 }
 
-; 第1階層のツールチップ。グループ見出しに降り先のキーを併記し、
-; 直接起動できる項目だけを並べる（サブメニュー限定の項目は出さない）。
+; 第1階層のツールチップ。全項目を、実際に打つキー列そのままで並べる。
+; direct の項目は第2打鍵だけで動くので短い方を出し、それ以外は
+; 「グループキー + 項目キー」の3ストロークを出す。
+; 降りてから選ぶ前に何が入っているか分かるよう、第3打鍵まで見せる。
 BuildAiMenuText(title) {
     global AiMenu
     text := title
     for group in AiMenu {
         text .= "`n- - - - - - - - - - - - - - - -`n" group.label " [" group.key "]"
-        for item in group.items
-            if AiItemIsDirect(item)
-                text .= "`n" AiItemDisp(item) ": " item.label
+        for item in group.items {
+            seq := AiItemIsDirect(item) ? AiItemDisp(item) : group.key " " AiItemDisp(item)
+            text .= "`n" seq ": " item.label
+        }
     }
     return text
 }
