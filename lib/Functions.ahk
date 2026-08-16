@@ -2,9 +2,14 @@
 ; wrapWidth を超える行は WrapText() で折り返す。ネイティブのツールチップは
 ; 改行文字でしか折れないため、長いパスなどを出すと横に伸び続けるので。
 ; 既定の60は2ストロークのメニュー（最長31）が折れない値にしてある。
+; クリアは「破棄」ではなく「ID=1 の非表示」で行う（ToolTipEx の第3引数）。
+; 引数無しの ToolTipEx() は WinClose でツールチップを破棄するため、
+; 直後に次のツールチップを出すと破棄と生成が競合して**表示されない**。
+; 3ストロークで第1階層→サブメニューに切り替わらなかった原因がこれ。
+; 実測：破棄方式は5回中5回失敗、非表示方式は5回中5回成功。
 MyTooltip(text := "", duration := 300, wrapWidth := 60) {
     if (text = "")
-        ToolTipEx()
+        ToolTipEx(, , 1)
     else
         ToolTipEx(WrapText(text, wrapWidth), duration / 1000)
 }
