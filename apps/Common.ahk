@@ -7,6 +7,7 @@ GlobalMenuText() {
     - - - - - - - - - - - - - - - -
     e: Explorer
     s: Screen Short
+    S: Gyazo
     f: 検索
     c: Color Picker
     v: Clipboard
@@ -16,6 +17,16 @@ GlobalMenuText() {
     k: ショートカット一覧
     r: Reload
     )"
+}
+
+; Gyazoの範囲キャプチャを開始する。常駐中でも起動し直すとその都度キャプチャが始まる。
+; 見つからないときにRunの例外ダイアログを出さないよう、ツールチップに落とす。
+RunGyazo() {
+    path := "C:\Program Files (x86)\Gyazo\Gyazowin.exe"
+    try
+        Run(path)
+    catch
+        MyTooltip("Gyazoが見つかりません`n" path, 2000)
 }
 
 vk1D & Space:: {
@@ -38,6 +49,7 @@ vk1D & Space:: {
         case "e":          Send("#e")
         case "r":          Reload              ; 実行しているスクリプトのReload
         case "s":          Send("#+s")
+        case "S":          RunGyazo()             ; switch は既定で大文字小文字を区別する（実測確認済み）
         case "f":          Send("{LWin}")
         case "v":          Send("#v")
         case "x":          Send("#x")
