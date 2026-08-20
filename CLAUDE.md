@@ -68,6 +68,7 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 - サブメニューは `Backspace` で第1階層へ戻る。`Escape` は全キャンセル
 - `direct: true` を付けると第1階層のメニューにも並び、第2打鍵だけで起動できる。頻用になった項目はこれで「昇格」させる
 - **矢印のように文字にならないキーは `InputHook` の `EndKey` にしないと拾えない。** `BuildAiEndKeys()` が項目キーの文字数（2文字以上＝特殊キー）から自動で組み立てる
+- **`KeyOpt` には `"SE"` と `S`（Suppress）を必ず付ける。** `InputHook` は文字キーを抑制するが、矢印のような非文字キーは既定（`VisibleNonText`）で素通しするため、`EndKey` に指定しただけでは Illustrator にも届く。矢印はオブジェクトが動き、**Backspace は選択中のオブジェクトを削除する**。実測：`"E"` だけだと漏れ、`"SE"` で漏れゼロ
 - `ReadAiMenuKey()` は**ツールチップを描く前にフックを張る**。`Wait()` が返ってから次の `Start()` までの隙間に押されたキーはIllustratorへ素通りし、単キーがツール切替に化けるため
 
 #### Premiere のメニューコマンド実行

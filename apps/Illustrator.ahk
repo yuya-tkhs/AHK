@@ -278,7 +278,11 @@ FindAiGroup(key) {
 ; 隙間に押されたキーはIllustratorへ素通りし、単キーがツール切替に化けるため。
 ReadAiMenuKey(menuText, allowBack := false, group := "", timeoutSec := 5) {
     ih := InputHook("L1 T" timeoutSec)
-    ih.KeyOpt(BuildAiEndKeys(group, allowBack), "E")
+    ; "S"（Suppress）が要る。InputHook は文字キーを抑制するが、矢印のような
+    ; 非文字キーは既定（VisibleNonText）で素通しするため、EndKeyに指定しただけでは
+    ; Illustrator にも届いてオブジェクトが動いてしまう。Escape や Backspace も同様で、
+    ; 特に Backspace は選択中のオブジェクトを削除してしまう。
+    ih.KeyOpt(BuildAiEndKeys(group, allowBack), "SE")
     ih.Start()
     MyTooltip(menuText, timeoutSec * 1000)
     ih.Wait()
