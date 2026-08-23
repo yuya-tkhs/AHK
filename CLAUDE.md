@@ -137,7 +137,7 @@ Adobe系でIMEがONのままツールキー（`V` など）を押すと、打鍵
 - **IMEで変換中でもAHKのホットキーは発火する**（実測確認済み）。低レベルフックがIMEより上流にあるため
 - `{vk1D}` は必ず `Esc` の後に送る。変換中に送るとカタカナ変換に食われてIMEが切れない
 - 修飾キー付き（`Ctrl+S` など）はIMEに吸われないので対象外。ホットキーに `*` は付けない
-- IMEは **ATOK 36**。窓のクラス名はIME製品に依存するので、MS-IMEなど別のIMEに変えたら再調査が要る
+- `CiceroUIWndFrame` は **Windows の TSF（Text Services Framework、開発コード名 Cicero）** が作る窓で、ATOK固有ではない。ただし**検証したのは ATOK 36 のみ**なので、MS-IMEなど別のIMEに変えたら出方を確認し直すこと（`ATOK36Cand` の方はATOK固有）
 
 ### F19〜F22 のアプリ別割り当て（lib/AppKeys.ahk）
 
