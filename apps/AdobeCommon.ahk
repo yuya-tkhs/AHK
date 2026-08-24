@@ -30,12 +30,13 @@ OnCtrlEnterPost() {
 global AdobeImeRescueDelay := 120   ; 打鍵から窓が出るまで実測約60ms。余裕をみる
 
 ; 打鍵の直後はまだ窓が無いので、少し待ってから判定する
-ScheduleImeRescue(key, *) {
+; shift: Shift併用で押されたか（Shift+M のようなツールキーも救済対象のため）
+ScheduleImeRescue(key, shift, *) {
     global AdobeImeRescueDelay
-    SetTimer(ImeRescueCheck.Bind(key), -AdobeImeRescueDelay)
+    SetTimer(ImeRescueCheck.Bind(key, shift), -AdobeImeRescueDelay)
 }
 
-ImeRescueCheck(key) {
+ImeRescueCheck(key, shift) {
     if !IsAdobeApp()
         return
     ; 可視の窓だけを探したいので DetectHiddenWindows は既定(Off)のまま使う
@@ -45,8 +46,8 @@ ImeRescueCheck(key) {
     Sleep(40)
     Send("{vk1D}")          ; 半角英数へ。変換中に送るとカタカナ変換に食われるのでEscの後
     Sleep(40)
-    Send("{" key "}")       ; 本来やりたかったツール切り替え
-    MyTooltip("日本語入力をOFFにして " ImeRescueKeyLabel(key) " を送りました", 1200)
+    Send((shift ? "+" : "") "{" key "}")    ; 本来やりたかったツール切り替え
+    MyTooltip("日本語入力をOFFにして " (shift ? "Shift+" : "") ImeRescueKeyLabel(key) " を送りました", 1200)
 }
 
 ; ツールチップに出す表記。記号キーは "vkBA" のままだと何のことか分からないので、
@@ -78,7 +79,11 @@ AdobeImeRescueKeys() {
 ; 修飾キー付き（Ctrl+S など）はIMEに吸われないので対象外＝「*」は付けない。
 ; 「-」「:」などはPremiere側にも定義があるが、あちらは左ボタン押下中限定の
 ; 別バリアントなので競合しない（先に登録された側が条件成立時だけ優先される）。
+; Shift併用（Shift+M など）もツールキーとして使われ、同じようにIMEに吸われるので
+; 両方を登録する。Ctrl/Alt併用はIMEに吸われないため対象外。
 HotIf((*) => IsAdobeApp())
-for _imeKey in AdobeImeRescueKeys()
-    Hotkey("~" _imeKey, ScheduleImeRescue.Bind(_imeKey))
+for _imeKey in AdobeImeRescueKeys() {
+    Hotkey("~" _imeKey, ScheduleImeRescue.Bind(_imeKey, false))
+    Hotkey("~+" _imeKey, ScheduleImeRescue.Bind(_imeKey, true))
+}
 HotIf()
