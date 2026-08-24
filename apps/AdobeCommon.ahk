@@ -49,9 +49,26 @@ ImeRescueCheck(key) {
     MyTooltip("日本語入力をOFFにして " StrUpper(key) " を送りました", 1200)
 }
 
-; 対象は英字すべて。判定が厳密なのでキーを絞る必要がない。
+; 対象は文字を生むキーすべて（英字・数字・記号）。判定が厳密なのでキーを絞る必要がない。
+; 英字だけにしていたら記号のツールキーが救済されなかったため広げた。
+; 記号は「^」がAHKの修飾キー記号と紛れるので、JIS配列で位置が決まる vk コードで指定する。
+AdobeImeRescueKeys() {
+    keys := []
+    for k in StrSplit("abcdefghijklmnopqrstuvwxyz")
+        keys.Push(k)
+    Loop 10                                     ; 0〜9
+        keys.Push("vk" Format("{:X}", 0x30 + A_Index - 1))
+    ; JIS配列の記号キー（括弧内は無シフト時の文字）
+    ; BA(:) BB(;) BC(,) BD(-) BE(.) BF(/) C0(@) DB([) DC(¥) DD(]) DE(^) E2(\)
+    for vk in ["BA", "BB", "BC", "BD", "BE", "BF", "C0", "DB", "DC", "DD", "DE", "E2"]
+        keys.Push("vk" vk)
+    return keys
+}
+
 ; 修飾キー付き（Ctrl+S など）はIMEに吸われないので対象外＝「*」は付けない。
+; 「-」「:」などはPremiere側にも定義があるが、あちらは左ボタン押下中限定の
+; 別バリアントなので競合しない（先に登録された側が条件成立時だけ優先される）。
 HotIf((*) => IsAdobeApp())
-for _imeKey in StrSplit("abcdefghijklmnopqrstuvwxyz")
+for _imeKey in AdobeImeRescueKeys()
     Hotkey("~" _imeKey, ScheduleImeRescue.Bind(_imeKey))
 HotIf()
