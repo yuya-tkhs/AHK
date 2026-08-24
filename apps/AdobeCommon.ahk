@@ -46,7 +46,17 @@ ImeRescueCheck(key) {
     Send("{vk1D}")          ; 半角英数へ。変換中に送るとカタカナ変換に食われるのでEscの後
     Sleep(40)
     Send("{" key "}")       ; 本来やりたかったツール切り替え
-    MyTooltip("日本語入力をOFFにして " StrUpper(key) " を送りました", 1200)
+    MyTooltip("日本語入力をOFFにして " ImeRescueKeyLabel(key) " を送りました", 1200)
+}
+
+; ツールチップに出す表記。記号キーは "vkBA" のままだと何のことか分からないので、
+; MapVirtualKey で実際の文字（: ; @ ^ など）に直す。対応表を手書きすると
+; キーを足したときにずれるため、OSに引かせる。
+ImeRescueKeyLabel(key) {
+    if (SubStr(key, 1, 2) != "vk")
+        return StrUpper(key)
+    code := DllCall("MapVirtualKeyW", "UInt", Integer("0x" SubStr(key, 3)), "UInt", 2, "UInt")
+    return code ? Chr(code & 0x7FFF) : key
 }
 
 ; 対象は文字を生むキーすべて（英字・数字・記号）。判定が厳密なのでキーを絞る必要がない。
