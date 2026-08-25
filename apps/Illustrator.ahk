@@ -165,21 +165,54 @@ global AiMenu := [
         { key: "E", label: "PNG（等倍）", direct: true, tooltip: true, jsx: "render_active_artboard.jsx" } ] },
     { key: "o", label: "オブジェクト", items: [
         { key: "t", label: "テキストプロパティエディタ", direct: true, jsx: "text_property_editor.jsx" },
-        { key: "g", label: "位置・サイズ", direct: true, jsx: "xywh_input.jsx" } ] },
-    ; 整列はIllustratorのメニューコマンド（JSXは存在しない）
-    { key: "s", label: "整列", items: [
+        { key: "g", label: "位置・サイズ", direct: true, jsx: "xywh_input.jsx" } ] }
+]
+
+; 修飾キー付きの単独ホットキーに割り当てた項目（整列・文字揃え）。
+; もとは2ストロークのサブメニュー（s / j）に置いていたが、連続で使うものなので
+; 3打鍵は多すぎた。押しっぱなしのまま方向だけ変えられる直接キーへ移した。
+; 項目の形は AiMenu と同じなので AiItemAction / AiItemDisp をそのまま使える。
+; ホットキーの登録・ランチャーの一覧・ショートカット一覧を全てここから作るので、
+; 追加・変更はこの配列だけを直せばよい（AiMenu と同じ方針）。
+; mod は AHK の修飾キー記号（^ = Ctrl / ! = Alt / + = Shift）。
+; 整列はIllustratorのメニューコマンド（JSXは存在しない）、文字揃えは sttk3 製のJSX。
+; 文字揃えに ↑↓ / m が無いのは、横方向の3つしか対応するJSXが無いため。
+global AiDirectKeys := [
+    { label: "整列", mod: "^!", modDisp: "Ctrl + Alt", items: [
         { key: "Left",  disp: "←", label: "左に整列", menucmd: "Horizontal Align Left" },
         { key: "Right", disp: "→", label: "右に整列", menucmd: "Horizontal Align Right" },
         { key: "Up",    disp: "↑", label: "上に整列", menucmd: "Vertical Align Top" },
         { key: "Down",  disp: "↓", label: "下に整列", menucmd: "Vertical Align Bottom" },
         { key: "c", label: "水平方向中央に整列", menucmd: "Horizontal Align Center" },
         { key: "m", label: "垂直方向中央に整列", menucmd: "Vertical Align Center" } ] },
-    ; 文字揃えは sttk3 製のJSX。よく使う3つだけ第3打鍵に載せる（残りはランチャーから）
-    { key: "j", label: "文字揃え", items: [
+    { label: "文字揃え", mod: "^!+", modDisp: "Ctrl + Alt + Shift", items: [
         { key: "Left",  disp: "←", label: "左揃え",   jsx: "sttk3-changeJustification\justification=left.jsx" },
         { key: "Right", disp: "→", label: "右揃え",   jsx: "sttk3-changeJustification\justification=right.jsx" },
-        { key: "Up",    disp: "↑", label: "中央揃え", jsx: "sttk3-changeJustification\justification=center.jsx" } ] }
+        { key: "c", label: "中央揃え", jsx: "sttk3-changeJustification\justification=center.jsx" } ] }
 ]
+
+; ホットキーのコールバックを作る。
+; コールバックには押されたキー名が渡されるので、引数を捨てる包みを噛ませる
+; （AiItemAction が返す BoundFunc は余分な引数を受け取れない）。
+; 包みを関数の中で作るのは、ループ変数を閉包が共有しないようにするため
+; （トップレベルの for で作るとグローバル変数を参照し、全部が最後の項目になる）。
+AiDirectCallback(item) {
+    action := AiItemAction(item)
+    return (*) => action.Call()
+}
+
+; 定義からホットキーを登録する。
+; ロード時の #HotIf ではなく実行時の HotIfWinActive を使うのは、
+; Hotkey 関数でまとめて登録するため（ランチャーの Up/Down と同じやり方）。
+RegisterAiDirectKeys() {
+    global AiDirectKeys, exe_ai
+    HotIfWinActive(exe_ai)
+    for group in AiDirectKeys
+        for item in group.items
+            Hotkey(group.mod item.key, AiDirectCallback(item))
+    HotIf()                         ; 以降の登録に条件を持ち越さない
+}
+RegisterAiDirectKeys()
 
 ; 項目の実行内容を組み立てる（定義から都度作るので二重管理にならない）
 AiItemAction(item) {

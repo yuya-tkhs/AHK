@@ -6,7 +6,7 @@
 ;;   2列に組めず縦に長くなりすぎるため。
 ;;
 ;;   2ストロークの中身は各ファイルのメニュー文字列（GlobalMenuText /
-;;   ExplorerMenuText / PremiereMenuText）と AiMenu から組み立てる。
+;;   ExplorerMenuText / PremiereMenuText）と AiMenu / AiDirectKeys から組み立てる。
 ;;   ここに書き写すとメニューを直したときに一覧だけ古くなるため。
 ;;   単独ホットキーはコードから機械的に取り出せないのでこのファイルに書く。
 ;;
@@ -197,8 +197,25 @@ PremiereShortcutRows() {
 }
 
 AiSoloShortcutRows() {
-    return [["Alt + Enter", "MultiEditText（日本語入力ON）"]
+    rows := [["Alt + Enter", "MultiEditText（日本語入力ON）"]
         , ["Shift + PgDn / PgUp", "次 / 前のアートボードを表示して全選択"]
         , ["Ctrl + Enter", "ダイアログのOKをクリック"]
         , ["F19〜F22", "↓ / ↑ / Shift+Tab / Tab"]]
+    for row in AiDirectShortcutRows()
+        rows.Push(row)
+    return rows
+}
+
+; 修飾キー付きの直接キー（整列・文字揃え）は AiDirectKeys から組み立てる。
+; 修飾キーを見出しにして、その下に打つキーをぶら下げる（3ストロークと同じ形）。
+; キーの欄は幅が決まっているので「Ctrl + Alt + Shift + ←」と1行に並べない。
+AiDirectShortcutRows() {
+    global AiDirectKeys
+    rows := []
+    for group in AiDirectKeys {
+        rows.Push([group.modDisp " +", group.label])
+        for item in group.items
+            rows.Push(["　└ " AiItemDisp(item), "　" item.label])
+    }
+    return rows
 }

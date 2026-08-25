@@ -119,21 +119,24 @@ AiLauncherSearchOnly(rel) {
 }
 
 ; 一覧を作る。
-; 先に AiMenu（日本語ラベル・メニューコマンドを持つ手書き定義）を並べ、
-; 続いてフォルダを再帰列挙して、AiMenu に出てこないJSXだけを足す。
+; 先に AiMenu と AiDirectKeys（日本語ラベル・メニューコマンドを持つ手書き定義）を
+; 並べ、続いてフォルダを再帰列挙して、そこに出てこないJSXだけを足す。
+; AiDirectKeys も混ぜるのは、整列のメニューコマンドに対応するJSXファイルが無く、
+; 拾い漏らすとランチャーから消えてしまうため。
 ; 1列目はファイル名。半角のまま検索でき、ラベルを持たない列挙分とも表記が揃うため。
 BuildAiLauncherItems() {
-    global AiMenu
+    global AiMenu, AiDirectKeys
     items := []
     seen := Map()
     seen.CaseSense := false         ; Windowsのパスは大文字小文字を区別しない
-    for group in AiMenu
-        for item in group.items {
-            items.Push({ name: AiItemName(item), label: item.label
-                       , group: group.label, action: AiItemAction(item) })
-            if item.HasOwnProp("jsx")
-                seen[item.jsx] := true
-        }
+    for def in [AiMenu, AiDirectKeys]   ; menu は組み込みクラス名なので避ける
+        for group in def
+            for item in group.items {
+                items.Push({ name: AiItemName(item), label: item.label
+                           , group: group.label, action: AiItemAction(item) })
+                if item.HasOwnProp("jsx")
+                    seen[item.jsx] := true
+            }
     base := AiLauncherBase()
     Loop Files base "*.jsx", "R" {
         rel := SubStr(A_LoopFileFullPath, StrLen(base) + 1)
