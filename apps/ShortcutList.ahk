@@ -178,7 +178,8 @@ AppShortcutSections(app) {
                   , { title: "Illustrator 単独", rows: AiSoloShortcutRows() }]
         case "explorer":
             return [{ title: "エクスプローラー 2ストローク（Ctrl + Space）", rows: MenuTextRows(ExplorerMenuText()) }
-                  , { title: "エクスプローラー 単独", rows: [["F21 / F22", "前 / 次のタブ"]] }]
+                  , { title: "エクスプローラー 単独", rows: [["F21 / F22", "前 / 次のタブ"]
+                                                          , ["BS", "削除（一覧にフォーカス時）"]] }]
     }
     return []
 }

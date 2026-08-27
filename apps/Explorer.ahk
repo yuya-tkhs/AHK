@@ -282,3 +282,40 @@ CreateFolders(folderNames) {
 }
 
 #HotIf
+;;
+;; BS → Del（ファイル一覧にフォーカスがあるときだけ）
+;;
+;;   エクスプローラーの既定では BS は「戻る」だが、戻るは Alt+← を使うので
+;;   削除に振り替える。名前の変更（インラインのEdit）・アドレスバー・
+;;   検索ボックスでは素の BS が要るため、一覧にいるときだけ差し替える。
+;;
+;;   判定はホワイトリスト（DirectUIHWND 等）にする。「Edit なら通す」という
+;;   ブラックリストにしないのは、Win11 の検索ボックスが Edit ではなく XAML で
+;;   拾えないため。取得に失敗したときも false に倒して素の BS を通す。
+;;
+;;   ファイルダイアログ（IsFileDialog）は対象外。BS が「上の階層へ」であり、
+;;   選ぶ場面で消す操作を増やしたくないため。
+;;;;
+
+#HotIf WinActive(class_explorer) && IsShellListFocused()
+
+BS::Send("{Del}")
+
+#HotIf
+
+; フォーカスがファイル一覧またはナビゲーションウィンドウにあるか。
+; どちらも DirectUIHWND。SysListView32 / SysTreeView32 は旧来の表示用の保険。
+IsShellListFocused() {
+    static listClasses := ["DirectUIHWND", "SysListView32", "SysTreeView32"]
+    try {
+        hwnd := ControlGetFocus("A")
+        if (!hwnd)
+            return false
+        cls := WinGetClass("ahk_id " hwnd)
+        for name in listClasses {
+            if (InStr(cls, name) = 1)
+                return true
+        }
+    }
+    return false
+}
