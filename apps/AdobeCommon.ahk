@@ -34,45 +34,103 @@ global AdobeImeRescueDelay    := 30    ; 打鍵から最初に窓を見に行く
 global AdobeImeRescuePoll     := 15    ; 窓が出るまでの再確認間隔
 global AdobeImeRescueTimeout  := 180   ; ここまで出なければ「変換中ではない」と諦める
 global AdobeImeRescueStep     := 40    ; Esc後・無変換後の待ちの上限
-global AdobeImeRescueCooldown := 150   ; 救済直後に次の救済を始めない時間
+global AdobeImeRescueMaxKeys  := 8     ; 一度に送り直す打鍵数の上限（暴走よけ）
 
+; IMEに吸われた可能性のある打鍵を、救済されるか時間切れになるまで持っておく。
+; 連打のうち窓が出る前（実測60ms）に入った分は Esc でまとめて消えるため、
+; 1回だけ送り直すと打鍵数が減ってしまう。溜めた分をまとめて送り直す。
+global _imeRescuePending := []
 global _imeRescueBusy := false         ; 救済の実行中か（Sleep中に別の打鍵が割り込むため）
-global _imeRescueDoneTick := 0         ; 直前の救済が終わった時刻
 
 ; 打鍵の直後はまだ窓が無いので、少し待ってから判定する
 ; shift: Shift併用で押されたか（Shift+M のようなツールキーも救済対象のため）
 ScheduleImeRescue(key, shift, *) {
-    global AdobeImeRescueDelay
-    SetTimer(ImeRescueCheck.Bind(key, shift, A_TickCount), -AdobeImeRescueDelay)
+    global _imeRescuePending
+    ImeRescuePrune()
+    entry := { key: key, shift: shift, tick: A_TickCount, done: false }
+    _imeRescuePending.Push(entry)
+    SetTimer(ImeRescueCheck.Bind(entry), -AdobeImeRescueDelay)
 }
 
 ; 窓が出ていれば救済する。まだなら AdobeImeRescueTimeout まで再確認を繰り返す。
 ; 固定待ちを止めて短い間隔で覗きに行くことで、窓が出た時点ですぐ動ける。
-; pressedTick: 打鍵時刻（諦めるまでの猶予を打鍵からの経過で測るため）
-ImeRescueCheck(key, shift, pressedTick) {
-    global _imeRescueBusy, _imeRescueDoneTick
-    ; 救済中とその直後は何もしない。Esc→無変換→キー の間に押されたキーの確認が
-    ; 割り込むと、消えかけの窓を見て二重に救済してしまうため
-    if _imeRescueBusy || (A_TickCount - _imeRescueDoneTick < AdobeImeRescueCooldown)
+ImeRescueCheck(entry) {
+    global _imeRescueBusy
+    if entry.done                       ; 直前の救済でまとめて送り直された
         return
-    if !IsAdobeApp()
-        return
-    pid := WinGetPID("A")
-    ; 可視の窓だけを探したいので DetectHiddenWindows は既定(Off)のまま使う
-    if !ImeRescueComposing(pid) {
-        if (A_TickCount - pressedTick < AdobeImeRescueTimeout)
-            SetTimer(ImeRescueCheck.Bind(key, shift, pressedTick), -AdobeImeRescuePoll)
+    if !IsAdobeApp() {                  ; フォーカスが離れた。もう送り直さない
+        entry.done := true
         return
     }
+    pid := WinGetPID("A")
+    ; 可視の窓だけを探したいので DetectHiddenWindows は既定(Off)のまま使う
+    ; 救済の実行中も判断を保留する。Esc→無変換→キー の途中で覗くと、消えかけの窓を
+    ; 見て二重に救済してしまうため。保留した打鍵は終わってから改めて判断される
+    if (_imeRescueBusy || !ImeRescueComposing(pid)) {
+        if (A_TickCount - entry.tick < AdobeImeRescueTimeout)
+            SetTimer(ImeRescueCheck.Bind(entry), -AdobeImeRescuePoll)
+        else
+            entry.done := true          ; 時間切れ＝吸われずにアプリへ届いていた
+        return
+    }
+    ImeRescueRun(pid)
+}
+
+; 溜まっている打鍵をまとめて送り直す
+ImeRescueRun(pid) {
+    global _imeRescuePending, _imeRescueBusy
+    batch := []
+    for e in _imeRescuePending {
+        if !e.done {
+            e.done := true              ; 各打鍵の再確認タイマーを止める
+            batch.Push(e)
+        }
+    }
+    _imeRescuePending := []
+    if !batch.Length
+        return
+    if (batch.Length > AdobeImeRescueMaxKeys)
+        batch.Length := AdobeImeRescueMaxKeys
     _imeRescueBusy := true
     Send("{Escape}")        ; 未確定文字列を破棄（これが無いと ｖ が残る）
     ImeRescueWaitUntil(() => !ImeRescueComposing(pid), AdobeImeRescueStep)
     Send("{vk1D}")          ; 半角英数へ。変換中に送るとカタカナ変換に食われるのでEscの後
     ImeRescueWaitUntil(() => !IsImeOn(), AdobeImeRescueStep)
-    Send((shift ? "+" : "") "{" key "}")    ; 本来やりたかったツール切り替え
-    _imeRescueDoneTick := A_TickCount
+    seq := ""               ; 押された順に1回の Send で送る（間に生の打鍵が挟まらない）
+    for e in batch
+        seq .= (e.shift ? "+" : "") "{" e.key "}"
+    Send(seq)               ; 本来やりたかったツール切り替え
     _imeRescueBusy := false
-    MyTooltip("日本語入力をOFFにして " (shift ? "Shift+" : "") ImeRescueKeyLabel(key) " を送りました", 1200)
+    MyTooltip(ImeRescueMessage(batch), 1200)
+}
+
+; 時間切れ・送り直し済みの打鍵を捨てる。救済が一度も起きなくても溜まり続けないように、
+; 打鍵のたびに掃除する（残るのは直近 AdobeImeRescueTimeout ぶんだけ）
+ImeRescuePrune() {
+    global _imeRescuePending
+    live := []
+    for e in _imeRescuePending {
+        if (!e.done && A_TickCount - e.tick < AdobeImeRescueTimeout)
+            live.Push(e)
+    }
+    _imeRescuePending := live
+}
+
+; ツールチップの文言。同じキーの連打は「V を3回」とまとめる
+ImeRescueMessage(batch) {
+    labels := []
+    for e in batch
+        labels.Push((e.shift ? "Shift+" : "") ImeRescueKeyLabel(e.key))
+    same := true
+    for lb in labels
+        if (lb !== labels[1])
+            same := false
+    if (same)
+        return "日本語入力をOFFにして " labels[1] " を" (labels.Length > 1 ? labels.Length "回" : "") "送りました"
+    joined := ""
+    for lb in labels
+        joined .= (joined ? " " : "") lb
+    return "日本語入力をOFFにして " joined " を送りました"
 }
 
 ; テキスト入力先が無いまま変換中か（未確定文字列の浮動窓が出ているか）
