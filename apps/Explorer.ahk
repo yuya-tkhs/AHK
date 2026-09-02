@@ -293,11 +293,12 @@ CreateFolders(folderNames) {
 ;;   ブラックリストにしないのは、Win11 の検索ボックスが Edit ではなく XAML で
 ;;   拾えないため。取得に失敗したときも false に倒して素の BS を通す。
 ;;
-;;   ファイルダイアログ（IsFileDialog）は対象外。BS が「上の階層へ」であり、
-;;   選ぶ場面で消す操作を増やしたくないため。
+;;   ファイルダイアログ（「名前を付けて保存」「開く」など）も同じにする。
+;;   一覧の中身はエクスプローラーと同じ DirectUIHWND なので判定は共通。
+;;   ファイル名の入力欄は Edit なので、そこでは素の BS が通る。
 ;;;;
 
-#HotIf WinActive(class_explorer) && IsShellListFocused()
+#HotIf (WinActive(class_explorer) || IsFileDialog()) && IsShellListFocused()
 
 BS::Send("{Del}")
 
