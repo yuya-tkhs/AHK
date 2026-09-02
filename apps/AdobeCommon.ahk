@@ -27,27 +27,70 @@ OnCtrlEnterPost() {
 ; 判定コストは実測 0.07ms/回（IsImeOn() の 0.013ms と同程度）。
 ; 常駐 InputHook は使わない（体感遅延が出るため廃止済み）。
 
-global AdobeImeRescueDelay := 120   ; 打鍵から窓が出るまで実測約60ms。余裕をみる
+; 待ちはすべて「起きるはずのことを観測して、起きたら即進む」方式にした。
+; 上限は従来の固定待ち（判定120ms＋Esc後40ms＋無変換後40ms＝約200ms）と同じなので、
+; 最悪でも従来と同じ速さで、通常はそれより速く終わる（実測で窓が出るのは約60ms後）。
+global AdobeImeRescueDelay    := 30    ; 打鍵から最初に窓を見に行くまで
+global AdobeImeRescuePoll     := 15    ; 窓が出るまでの再確認間隔
+global AdobeImeRescueTimeout  := 180   ; ここまで出なければ「変換中ではない」と諦める
+global AdobeImeRescueStep     := 40    ; Esc後・無変換後の待ちの上限
+global AdobeImeRescueCooldown := 150   ; 救済直後に次の救済を始めない時間
+
+global _imeRescueBusy := false         ; 救済の実行中か（Sleep中に別の打鍵が割り込むため）
+global _imeRescueDoneTick := 0         ; 直前の救済が終わった時刻
 
 ; 打鍵の直後はまだ窓が無いので、少し待ってから判定する
 ; shift: Shift併用で押されたか（Shift+M のようなツールキーも救済対象のため）
 ScheduleImeRescue(key, shift, *) {
     global AdobeImeRescueDelay
-    SetTimer(ImeRescueCheck.Bind(key, shift), -AdobeImeRescueDelay)
+    SetTimer(ImeRescueCheck.Bind(key, shift, A_TickCount), -AdobeImeRescueDelay)
 }
 
-ImeRescueCheck(key, shift) {
+; 窓が出ていれば救済する。まだなら AdobeImeRescueTimeout まで再確認を繰り返す。
+; 固定待ちを止めて短い間隔で覗きに行くことで、窓が出た時点ですぐ動ける。
+; pressedTick: 打鍵時刻（諦めるまでの猶予を打鍵からの経過で測るため）
+ImeRescueCheck(key, shift, pressedTick) {
+    global _imeRescueBusy, _imeRescueDoneTick
+    ; 救済中とその直後は何もしない。Esc→無変換→キー の間に押されたキーの確認が
+    ; 割り込むと、消えかけの窓を見て二重に救済してしまうため
+    if _imeRescueBusy || (A_TickCount - _imeRescueDoneTick < AdobeImeRescueCooldown)
+        return
     if !IsAdobeApp()
         return
+    pid := WinGetPID("A")
     ; 可視の窓だけを探したいので DetectHiddenWindows は既定(Off)のまま使う
-    if !WinExist("ahk_class CiceroUIWndFrame ahk_pid " WinGetPID("A"))
+    if !ImeRescueComposing(pid) {
+        if (A_TickCount - pressedTick < AdobeImeRescueTimeout)
+            SetTimer(ImeRescueCheck.Bind(key, shift, pressedTick), -AdobeImeRescuePoll)
         return
+    }
+    _imeRescueBusy := true
     Send("{Escape}")        ; 未確定文字列を破棄（これが無いと ｖ が残る）
-    Sleep(40)
+    ImeRescueWaitUntil(() => !ImeRescueComposing(pid), AdobeImeRescueStep)
     Send("{vk1D}")          ; 半角英数へ。変換中に送るとカタカナ変換に食われるのでEscの後
-    Sleep(40)
+    ImeRescueWaitUntil(() => !IsImeOn(), AdobeImeRescueStep)
     Send((shift ? "+" : "") "{" key "}")    ; 本来やりたかったツール切り替え
+    _imeRescueDoneTick := A_TickCount
+    _imeRescueBusy := false
     MyTooltip("日本語入力をOFFにして " (shift ? "Shift+" : "") ImeRescueKeyLabel(key) " を送りました", 1200)
+}
+
+; テキスト入力先が無いまま変換中か（未確定文字列の浮動窓が出ているか）
+ImeRescueComposing(pid) {
+    return WinExist("ahk_class CiceroUIWndFrame ahk_pid " pid) != 0
+}
+
+; cond が成立するまで待つ。timeout(ms) に達したら成立していなくても返る。
+; 上限を従来の固定待ちと同じにしてあるので、観測が空振りしても遅くはならない。
+ImeRescueWaitUntil(cond, timeout) {
+    endTick := A_TickCount + timeout
+    loop {
+        if cond()
+            return true
+        if (A_TickCount >= endTick)
+            return false
+        Sleep(5)
+    }
 }
 
 ; ツールチップに出す表記。記号キーは "vkBA" のままだと何のことか分からないので、
