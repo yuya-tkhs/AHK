@@ -106,6 +106,31 @@ IsImeOn() {
         return false   ; タイムアウト時は「入力中でない」側に倒してキーを待たせない
 }
 
+; 変換中（未確定文字列がある）かどうか。IMEがONかどうか（IsImeOn）とは別物で、
+; ONのまま確定済みなら false になる。
+; AHKの低レベルフックはIMEより上流にあるので、変換中でもホットキーが先に発火する。
+; 何もしないと「変換を確定するEnter」がそのままホットキーの実行になってしまうため、
+; Enterや矢印を横取りするGUIでは、この判定で変換中だけIMEに譲る。
+; 未確定文字列の長さ（GCS_COMPSTR）をIMM32に聞く。ATOK 36 + AHKのGui Editで実測：
+;   変換前（何も打っていない）… 0
+;   「あいうえお」入力中     … 10（UTF-16のバイト数）
+;   変換中（候補ウィンドウ） … 10
+;   Escapeで取り消した後     … 0
+; ATOKはTSF（Cicero）のIMEだが、IMM32の互換レイヤ経由でこの値が取れる。
+; 別のIMEに変えたときは実測し直すこと。
+IsImeComposing(hWnd) {
+    static GCS_COMPSTR := 0x0008
+    if !hWnd
+        return false
+    hIMC := DllCall("imm32\ImmGetContext", "Ptr", hWnd, "Ptr")
+    if !hIMC
+        return false               ; コンテキストが無い＝変換中ではない
+    len := DllCall("imm32\ImmGetCompositionStringW", "Ptr", hIMC, "UInt", GCS_COMPSTR
+        , "Ptr", 0, "UInt", 0, "Int")
+    DllCall("imm32\ImmReleaseContext", "Ptr", hWnd, "Ptr", hIMC)
+    return len > 0                 ; 負値はエラー。false 側に倒す
+}
+
 ; 常に元に戻す／やり直しを割り当てるアプリ（テキスト編集が主目的のもの）。
 ; 入力していない間も取り消しを効かせたいアプリはここに1行足す。
 IsTextEditApp() {

@@ -130,6 +130,9 @@ Illustrator の2ストロークから `Space` で開く。文字入力で絞り�
 - **ScriptUIで作ってはいけない。** ランチャー自身がJSXになるため多重起動ガード（`IsAiScriptRunning()`）を占有し続け、パネルを開いている間そこから何も起動できなくなる。表示中はIllustrator本体もブロックされる
 - AHKのGUIはIllustratorからフォーカスを奪うが、**実行・キャンセルの直前に必ず `Hide()` → `WinActivate(exe_ai)` → `WinWaitActive` を通す**。アクティブ化の完了を待たずにJSXを起動すると、ダイアログが背面に出たりフォーカスを得られない。この往復でIllustratorの選択状態は失われない（実測確認済み）
 - `Enter` / `↑↓` / `F5` は `HotIf AiLauncherActive` でランチャー表示中だけ有効にする。検索欄にフォーカスがあるため、上下は横取りしないとListViewへ届かない。`~` を付けないのは二重常駐時に両インスタンスで発火させないため
+- **日本語変換中の打鍵はIMEに譲る**（`AiLauncherKey()` / `AiLauncherImePass()`）。AHKの低レベルフックはIMEより上流にあるので変換中でもホットキーが先に発火し、放っておくと**変換を確定する `Enter` がそのまま実行**になり、候補を選ぶ `↑↓` も奪われる。ホットキー側で抑制してしまうため、変換中は同じキーを**送り直して**IMEに届ける。送り直しは既定の `SendLevel 0` なので自分のホットキーは再発火しない
+- 変換中かどうかは `IsImeComposing()`（lib/AppKeys.ahk）が IMM32 の `ImmGetCompositionStringW`（`GCS_COMPSTR`）で未確定文字列の長さを見て判定する。**`IsImeOn()` では代用できない**（IMEがONでも確定済みなら実行してよいため）。ATOKはTSF製のIMEだがIMM互換レイヤ経由で取れる。実測（ATOK 36 ＋ AHKのGui Edit）：未入力0 / 「あいうえお」入力中10 / 候補ウィンドウ表示中10 / `Escape` 後0。**別のIMEに変えたら実測し直すこと**
+- 実測での通し確認：「あいうえお」入力中の `Enter` は確定だけで実行は起きず、確定後の `Enter` で実行される
 - 最近使ったものを先頭に出す（MRU・上限20件）。保存先は `%APPDATA%\AhkJsxLauncher\mru.txt`。リポジトリにもGoogleドライブにも置かないのは、使用履歴を版管理・同期の対象にしたくないため。並べ替えは絞り込みの**前**にかけるので、検索したときも最近使ったものが上に来る
 
 ### ショートカット一覧（apps/ShortcutList.ahk）

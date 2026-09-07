@@ -293,13 +293,35 @@ ReloadAiLauncherItems() {
     MyTooltip("一覧を再構築しました（" AiLauncherAllItems().Length " 件）", 1500)
 }
 
+; 日本語変換中の打鍵はIMEのものなので横取りしない。
+; AHKの低レベルフックはIMEより上流にあるため、変換中でもホットキーが先に発火する。
+; そのままだと「変換を確定するEnter」がそのまま実行になり、候補を選ぶ↑↓も奪われる。
+; ホットキー側で抑制してしまうので、IMEへ届くように同じキーを送り直す。
+; 送り直しは既定の SendLevel 0 なので、自分のホットキーは再発火しない。
+; 実測（ATOK 36）：あいうえお入力中のEnter → 送り返しで確定し実行は起きない、
+; 確定後のEnter → そのまま実行。
+AiLauncherImePass(key) {
+    global _aiLauncherEdit
+    if (!_aiLauncherEdit || !IsImeComposing(_aiLauncherEdit.Hwnd))
+        return false
+    Send("{" key "}")
+    return true
+}
+
+; ランチャーの操作キー。変換中はIMEに返し、そうでなければ本来の動作をする。
+AiLauncherKey(key, action, *) {
+    if AiLauncherImePass(key)
+        return
+    action.Call()
+}
+
 ; Enter・上下・F5 はランチャーがアクティブなときだけ拾う。
 ; 検索欄にフォーカスがあるため、上下はここで横取りしないとListViewへ届かない。
 ; 「~」を付けないのは、二重常駐したときに両インスタンスで発火させないため。
 HotIf AiLauncherActive
-Hotkey "Up", (*) => MoveAiLauncherSel(-1)
-Hotkey "Down", (*) => MoveAiLauncherSel(1)
-Hotkey "Enter", (*) => RunSelectedAiLauncherItem()
-Hotkey "NumpadEnter", (*) => RunSelectedAiLauncherItem()
-Hotkey "F5", (*) => ReloadAiLauncherItems()
+Hotkey "Up", AiLauncherKey.Bind("Up", () => MoveAiLauncherSel(-1))
+Hotkey "Down", AiLauncherKey.Bind("Down", () => MoveAiLauncherSel(1))
+Hotkey "Enter", AiLauncherKey.Bind("Enter", RunSelectedAiLauncherItem)
+Hotkey "NumpadEnter", AiLauncherKey.Bind("NumpadEnter", RunSelectedAiLauncherItem)
+Hotkey "F5", AiLauncherKey.Bind("F5", ReloadAiLauncherItems)
 HotIf
