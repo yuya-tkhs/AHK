@@ -33,7 +33,7 @@ OnCtrlEnterPremiere() {
 PremiereMenuText() {
     return "
     (
-    2ストローク待機中（5秒）
+    2ストローク待機中（10秒）
     - - - - - - - - - - - - - - - -
     p: 入力状態
     s: スケール変更
@@ -51,8 +51,8 @@ PremiereMenuText() {
 
 ; 2ストローク
 ^Space:: {
-    MyTooltip(PremiereMenuText(), 5000)
-    ih := InputHook("L1 T5") ; 次の1文字を待機 (L1: 1文字入力で終了, T2: 2秒でタイムアウト)
+    MyTooltip(PremiereMenuText(), 10000)
+    ih := InputHook("L1 T10") ; 次の1文字を待機 (L1: 1文字入力で終了, T10: 10秒でタイムアウト)
     ih.KeyOpt("{Escape}{Space}", "E")
     ih.Start()
     ih.Wait()

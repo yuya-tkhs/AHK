@@ -112,7 +112,7 @@ MenuTextRows(text) {
         if (line = "" || SubStr(line, 1, 1) = "-")
             continue
         if !(pos := InStr(line, ":"))
-            continue                ; 「2ストローク待機中（5秒）」などの見出し
+            continue                ; 「2ストローク待機中（10秒）」などの見出し
         key := Trim(SubStr(line, 1, pos - 1))
         desc := Trim(SubStr(line, pos + 1))
         if (key != "" && desc != "")

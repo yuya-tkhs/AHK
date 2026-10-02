@@ -256,7 +256,7 @@ BuildAiMenuText(title) {
 
 ; 第2階層（サブメニュー）のツールチップ。1行目をパンくずにする
 BuildAiSubMenuText(group) {
-    text := "2ストローク > " group.label "（5秒）"
+    text := "2ストローク > " group.label "（10秒）"
     text .= "`n- - - - - - - - - - - - - - - -"
     for item in group.items
         text .= "`n" AiItemDisp(item) ": " item.label
@@ -309,7 +309,7 @@ FindAiGroup(key) {
 ; 「戻る」を許すと Backspace をそのまま返す。
 ; フックはツールチップを描く「前」に張る。Wait()が返ってから次のStartまでの
 ; 隙間に押されたキーはIllustratorへ素通りし、単キーがツール切替に化けるため。
-ReadAiMenuKey(menuText, allowBack := false, group := "", timeoutSec := 5) {
+ReadAiMenuKey(menuText, allowBack := false, group := "", timeoutSec := 10) {
     ih := InputHook("L1 T" timeoutSec)
     ; "S"（Suppress）が要る。InputHook は文字キーを抑制するが、矢印のような
     ; 非文字キーは既定（VisibleNonText）で素通しするため、EndKeyに指定しただけでは
@@ -352,7 +352,7 @@ $~^Space:: {
     ; 出るのがその分遅れるため。
     ; （KeyWaitはAHKのスレッドを止めるだけでキーを抑制しないので、外しても取りこぼしは増えない）
     loop {
-        key := ReadAiMenuKey(BuildAiMenuText("2ストローク待機中（5秒）") AiMenuFooter())
+        key := ReadAiMenuKey(BuildAiMenuText("2ストローク待機中（10秒）") AiMenuFooter())
         if (key = "")               ; Escape かタイムアウト
             return
         if (key = "Space") {        ; 一覧から選ぶランチャーを開く

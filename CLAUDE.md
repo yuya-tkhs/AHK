@@ -43,7 +43,7 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 
 | 対象 | トリガー | 備考 |
 |------|----------|------|
-| グローバル（Common.ahk） | `vk1D + Space` | メニュー表示5秒／入力待ち2秒 |
+| グローバル（Common.ahk） | `vk1D + Space` | メニュー表示・入力待ちとも10秒（他の2ストロークも同じ） |
 | Explorer（Explorer.ahk） | `Ctrl + Space` | ファイルダイアログでも有効（`IsFileDialog()`で判定） |
 | Premiere（Premiere.ahk） | `Ctrl + Space` | ファイルダイアログ中は無効 |
 | Illustrator（Illustrator.ahk） | `Ctrl + Space` | 0.3秒以内の短押しのみ起動。長押しはAiにそのまま渡す。**3ストローク対応**（下記） |

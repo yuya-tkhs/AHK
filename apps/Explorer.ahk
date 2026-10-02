@@ -4,7 +4,7 @@
 ExplorerMenuText() {
     return "
     (
-    2ストローク待機中（5秒）
+    2ストローク待機中（10秒）
     - - - - - - - - - - - - - - - -
     Space: Rename
     r: PowerRename
@@ -21,8 +21,8 @@ ExplorerMenuText() {
 
 ; 2ストローク
 ^Space:: {
-    MyTooltip(ExplorerMenuText(), 5000)
-    ih := InputHook("L1 T5") ; 次の1文字を待機 (L1: 1文字入力で終了, T2: 2秒でタイムアウト)
+    MyTooltip(ExplorerMenuText(), 10000)
+    ih := InputHook("L1 T10") ; 次の1文字を待機 (L1: 1文字入力で終了, T10: 10秒でタイムアウト)
     ih.KeyOpt("{Escape}{Space}", "E")
     ih.Start()
     ih.Wait()

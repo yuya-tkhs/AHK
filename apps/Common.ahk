@@ -3,7 +3,7 @@
 GlobalMenuText() {
     return "
     (
-    2ストローク待機中（5秒）
+    2ストローク待機中（10秒）
     - - - - - - - - - - - - - - - -
     e: Explorer
     s: Screen Short
@@ -30,8 +30,8 @@ RunGyazo() {
 }
 
 vk1D & Space:: {
-    MyTooltip(GlobalMenuText(), 5000)
-    ih := InputHook("L1 T2") ; 次の1文字を待機 (L1: 1文字入力で終了, T2: 2秒でタイムアウト)
+    MyTooltip(GlobalMenuText(), 10000)
+    ih := InputHook("L1 T10") ; 次の1文字を待機 (L1: 1文字入力で終了, T10: 10秒でタイムアウト)
     ih.KeyOpt("{Space}{Escape}{vk1D}{Numpad5}{NumpadEnter}", "E")
     ih.Start()
     ih.Wait()
