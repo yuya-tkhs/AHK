@@ -16,7 +16,7 @@ GlobalMenuText() {
     a: オーディオ切り替え
     k: ショートカット一覧
     r: Reload
-    )"
+    )" . KnobMenuText()
 }
 
 ; Gyazoの範囲キャプチャを開始する。常駐中でも起動し直すとその都度キャプチャが始まる。

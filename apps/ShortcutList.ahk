@@ -132,6 +132,8 @@ AiShortcutRows() {
             rows.Push(["　└ " AiItemDisp(item), "　" item.label])
     }
     rows.Push(["Space", "JSXランチャー"])
+    for row in MenuTextRows(KnobMenuText("adobe"))   ; ツールチップの末尾と同じノブの欄
+        rows.Push(row)
     return rows
 }
 
@@ -150,8 +152,6 @@ CommonShortcutRows() {
         , ["Esc", "半角英数"]
         , ["Ctrl + Enter", "送信 + アプリ別の後処理"]
         , ["中ボタン ドラッグ", "スムーズスクロール"]
-        , ["F19 / F20", "表示 縮小 / 拡大（Adobe系は ↓ / ↑）"]
-        , ["F21 / F22", "取り消し・やり直し / タブ切り替え"]
         , ["Shift 等 + F19〜F22", "送るキーに修飾キーを重ねる"]
         , ["F23 / F24", "加速スクロール 下 / 上"]
         , ["ddd / ttt", "今日の日付（MMDD） / tkhs"]]
@@ -178,8 +178,7 @@ AppShortcutSections(app) {
                   , { title: "Illustrator 単独", rows: AiSoloShortcutRows() }]
         case "explorer":
             return [{ title: "エクスプローラー 2ストローク（Ctrl + Space）", rows: MenuTextRows(ExplorerMenuText()) }
-                  , { title: "エクスプローラー 単独", rows: [["F21 / F22", "前 / 次のタブ"]
-                                                          , ["BS", "削除（一覧にフォーカス時）"]] }]
+                  , { title: "エクスプローラー 単独", rows: [["BS", "削除（一覧にフォーカス時）"]] }]
     }
     return []
 }
@@ -193,15 +192,13 @@ PremiereShortcutRows() {
         , ["左クリック中 + e / E", "編集点を追加 / 全トラックに追加"]
         , ["左クリック中 + 2", "クリップ名の変更"]
         , ["左クリック中 + [ / ]", "ターゲット移動（Ctrl併用でオーディオ）"]
-        , ["左クリック中 + - / :", "縮小 / 拡大"]
-        , ["F19〜F22", "↓ / ↑ / Shift+Tab / Tab"]]
+        , ["左クリック中 + - / :", "縮小 / 拡大"]]
 }
 
 AiSoloShortcutRows() {
     rows := [["Alt + Enter", "MultiEditText（日本語入力ON）"]
         , ["Shift + PgDn / PgUp", "次 / 前のアートボードを表示して全選択"]
-        , ["Ctrl + Enter", "ダイアログのOKをクリック"]
-        , ["F19〜F22", "↓ / ↑ / Shift+Tab / Tab"]]
+        , ["Ctrl + Enter", "ダイアログのOKをクリック"]]
     for row in AiDirectShortcutRows()
         rows.Push(row)
     return rows

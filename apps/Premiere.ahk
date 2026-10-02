@@ -46,7 +46,7 @@ PremiereMenuText() {
     r: トラックロック
     R: トラックリリース
     2: トラック名の変更
-    )"
+    )" . KnobMenuText("adobe")
 }
 
 ; 2ストローク

@@ -266,7 +266,7 @@ BuildAiSubMenuText(group) {
 ; 第1階層の末尾に出す案内。Space は EndKey に入っているだけで未割当だったので
 ; ランチャーの入口に使っている（既存キーと衝突しない）。
 AiMenuFooter() {
-    return "`n- - - - - - - - - - - - - - - -`nSpace: ランチャー（一覧から選ぶ）"
+    return "`n- - - - - - - - - - - - - - - -`nSpace: ランチャー（一覧から選ぶ）" KnobMenuText("adobe")
 }
 
 ; InputHookのEndKey指定を組み立てる。

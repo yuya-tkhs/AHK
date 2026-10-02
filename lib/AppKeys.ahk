@@ -77,6 +77,30 @@ AppKey( key ) {
     Send( key = "F21" ? "{Blind}+{Tab}" : "{Blind}{Tab}" )
 }
 
+; 2ストロークのメニューに添えるノブ（F19〜F22）の割り当て。
+; app を省略すると基本の割り当て（グローバル2ストローク用）を返す。
+; "adobe" / "explorer" はそのアプリでの割り当て。AppKey() の分岐を直したらここも直す。
+; 「キー: 説明」の形にしてあるので、ショートカット一覧（MenuTextRows）もそのまま読める。
+KnobMenuText( app := "" ) {
+    text := "`n- - - - - - - - - - - - - - - -`nノブ"
+    switch app {
+        case "adobe":
+            text .= "`nF19 / F20: ↓ / ↑"
+                . "`nF21 / F22: Shift+Tab / Tab"
+        case "explorer":
+            text .= "`nF19 / F20: 表示 縮小 / 拡大"
+                . "`nF21 / F22: 前 / 次のタブ"
+                . "`n　└ 日本語入力中: 元に戻す / やり直し"
+        default:
+            text .= "`nF19 / F20: 表示 縮小 / 拡大（Adobe系は ↓ / ↑）"
+                . "`nF21 / F22: Shift+Tab / Tab"
+                . "`n　└ 日本語入力中・メモ帳: 元に戻す / やり直し"
+                . "`n　└ Chrome・エクスプローラー・VSCode: 前 / 次のタブ"
+                . "`n　└ デスクトップ: 無効"
+    }
+    return text
+}
+
 ; 元に戻す／やり直しを送る。メモ帳だけ ^+z が効かないため ^y にする。
 SendUndoRedo( key ) {
     if WinActive( exe_notepad )

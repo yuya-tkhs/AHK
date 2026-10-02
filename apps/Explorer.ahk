@@ -16,7 +16,7 @@ ExplorerMenuText() {
     - - - - - - - - - - - - - - - -
     1: 動画フォルダの作成
     2: Original, Proxy
-    )"
+    )" . KnobMenuText("explorer")
 }
 
 ; 2ストローク
