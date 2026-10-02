@@ -11,7 +11,54 @@ MyTooltip(text := "", duration := 300, wrapWidth := 80) {
     if (text = "")
         ToolTipEx(, , 1)
     else
-        ToolTipEx(WrapText(text, wrapWidth), duration / 1000)
+        ToolTipEx(StretchSeparators(WrapText(text, wrapWidth)), duration / 1000)
+}
+
+; 「- - - -」だけの行（メニューの区切り線）を、他の行のうち最も長いものの幅まで伸ばす。
+; ツールチップのフォントはプロポーショナルなので文字数では合わず、実際に描く幅（ピクセル）で比べる。
+; 折り返し（WrapText）の後にかける。区切り線は全角換算で文字数が多くなるため、先に伸ばすと
+; 区切り線そのものが折り返されてしまう。
+StretchSeparators(text) {
+    if !RegExMatch(text, "m)^-( -)*$")
+        return text
+    lines := StrSplit(text, "`n", "`r")
+    maxW := 0
+    for line in lines
+        if !RegExMatch(line, "^-( -)*$")
+            maxW := Max(maxW, TooltipTextWidth(line))
+    if (maxW = 0)
+        return text
+    ; 最長の行を超えない最大の本数にする（「-」1本 + 「 -」n組）
+    n := Max(0, Floor((maxW - TooltipTextWidth("-")) / TooltipTextWidth(" -")))
+    sep := "-"
+    Loop n
+        sep .= " -"
+    out := ""
+    for i, line in lines
+        out .= (i > 1 ? "`n" : "") (RegExMatch(line, "^-( -)*$") ? sep : line)
+    return out
+}
+
+; ツールチップ（tooltips_class32）と同じフォントで描いたときの幅（ピクセル）。
+; ツールチップはシステムのステータスフォント（NONCLIENTMETRICS.lfStatusFont）で描かれる。
+; 行どうしの比較にしか使わないので、画面のDPIとの差は問題にならない。
+TooltipTextWidth(str) {
+    static hFont := 0
+    if !hFont {
+        ; NONCLIENTMETRICSW = 504バイト（iPaddedBorderWidth 込み）。LOGFONTW は92バイト。
+        ; lfStatusFont は cbSize + int×5 + lfCaption + int×2 + lfSmCaption + int×2 + lfMenu の後＝316
+        ncm := Buffer(504, 0)
+        NumPut("UInt", 504, ncm, 0)
+        DllCall("SystemParametersInfoW", "UInt", 0x29, "UInt", 504, "Ptr", ncm, "UInt", 0)  ; SPI_GETNONCLIENTMETRICS
+        hFont := DllCall("CreateFontIndirectW", "Ptr", ncm.Ptr + 316, "Ptr")
+    }
+    hdc := DllCall("GetDC", "Ptr", 0, "Ptr")
+    old := DllCall("SelectObject", "Ptr", hdc, "Ptr", hFont, "Ptr")
+    sz := Buffer(8, 0)
+    DllCall("GetTextExtentPoint32W", "Ptr", hdc, "WStr", str, "Int", StrLen(str), "Ptr", sz)
+    DllCall("SelectObject", "Ptr", hdc, "Ptr", old)
+    DllCall("ReleaseDC", "Ptr", 0, "Ptr", hdc)
+    return NumGet(sz, 0, "Int")
 }
 
 ; 全角を2・半角を1として数え、width を超えたところで改行を入れる。
