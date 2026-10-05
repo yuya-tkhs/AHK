@@ -219,7 +219,7 @@ Adobe系でIMEがONのままツールキー（`V` など）を押すと、打鍵
 | F23  | 下スクロール |
 | F24  | 上スクロール |
 
-- 単押しは `MIN_NOTCH`（初期値2ノッチ）、長押しは経過時間に応じて増え、約580msで上限に達する
+- 単押しは `MIN_NOTCH`（初期値2.6ノッチ）、長押しは経過時間に応じて増え、約580msで上限に達する
 - 速度は `AccelScroll()` 冒頭の `static` 定数（`REPEAT_DELAY` / `INTERVAL` / `RAMP_STEP` / `MIN_NOTCH` / `MAX_NOTCH`）で調整する
 - 送信は `SendWheel()` が `mouse_event` で生のデルタ値（1ノッチ = 120単位）を送る。`Send "{WheelDown n}"` と違い 1.5 のような小数ノッチを扱えるため
 - 多重起動ガードの `static` は上下で共有のため、同時に走るスクロールは1方向のみ
