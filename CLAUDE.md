@@ -17,14 +17,13 @@ apps/
   IllustratorLauncher.ahk  # JSXを一覧から選んで実行するランチャー
   AdobeCommon.ahk          # Adobe共通の Ctrl+Enter 後処理をアプリ別に振り分け
 lib/
-  Functions.ahk            # 共通関数（MyTooltip, WrapText, 2/3ストロークメニュー, IsUrl, CleanUrl, ClickImageAndReturn）
+  Functions.ahk            # 共通関数（MyTooltip, WrapText, 2/3ストロークメニュー, IsUrl, CleanUrl）
   Hotstring.ahk            # テキスト展開（ddd → 今日の日付MMDD / ttt → tkhs）
   Mouse.ahk                # 中クリックスクロール
   ScrollKeys.ahk           # F23/F24 によるキー加速スクロール
   AppKeys.ahk              # F19〜F22 のアプリ別割り当て（表示倍率／元に戻す／タブ切り替え）
   ToolTipEx.ahk            # ツールチップ描画の拡張
   run_ai_script.ahk        # JSXを別プロセスで実行する子スクリプト
-images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 ```
 
 ## キーの表記
@@ -153,6 +152,17 @@ MenuSelect(exe_pr, , "グラフィックとタイトル", "キャプションを
 | `Alt + Enter` | MultiEditText.jsx（表示中は日本語入力ON） |
 | `Shift + PgDn` | 次のアートボードを表示して全選択 |
 | `Shift + PgUp` | 前のアートボードを表示して全選択 |
+| `Ctrl + Enter` | JSXダイアログ（Multi-edit Text / テキストプロパティ設定 / 位置・サイズ）を確定 |
+
+#### JSXダイアログの確定（`AiDialogConfirm`）
+
+`Ctrl + Enter` を **F13** に置き換えて送り、JSX側はウィンドウの `keydown` で F13 を受けて OK と同じ処理を呼ぶ（JSXリポジトリの CLAUDE.md「ScriptUI ダイアログの確定キー」に同じ内容を書いてある）。2026-10-06 に OK ボタンの画像クリック（`ClickImageAndReturn` / `images/ai_OK.png`、削除済み）から置き換えた。
+
+- 対象のダイアログは `AiConfirmDialogs`（apps/Illustrator.ahk）のタイトルで見分ける（部分一致＋ `ahk_exe Illustrator.exe`）。**JSX側でタイトルを変えたらここも直す**。増やすときは JSX に F13 の受け口を足してからタイトルを足す
+- **日本語の変換中は Ctrl+Enter も F13 も IME に吸われてダイアログに届かない**（実測）。変換中でなければ、どの入力欄・部品にフォーカスがあっても届く。以前「入力欄によって Ctrl+Enter が効いたり効かなかったりする」と見えていたのはこれだった
+- そのため変換中なら先に `{Enter}` で確定し、未確定文字列の窓が消えるのを待ってから F13 を送る（上限500ms）。変換中かどうかは、変換中だけ出る `MSCTFIME Composition` の窓（`ahk_exe Illustrator.exe`）で見る。**`IsImeComposing()`（IMM32）は別プロセスの入力欄だと常に0で使えない**（実測）
+- 実測：実物の3つのJSXで、変換中の日本語・英数・日本語入力ONのままの全角数字のいずれも確定・反映された。確定した文字列も保持される
+- ScriptUI の `edittext` は Win32 の `Edit` コントロール。ボタンは `DroverLord - Window Class` で標準の Button ではないので `ControlClick` では押せない
 
 #### 整列・文字揃えの直接キー
 

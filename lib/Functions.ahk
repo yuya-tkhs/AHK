@@ -276,13 +276,3 @@ ReadSubMenuItem(group) {
     MyTooltip("無効なキーです", 500)
     return ""
 }
-
-; variation: 色の許容誤差（0-255）。大きいほど判定がゆるくなる
-ClickImageAndReturn(imgPath, notFoundMsg, variation := 100) {
-    if ImageSearch(&imgX, &imgY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*" variation " " imgPath) {
-        MouseGetPos(&origX, &origY)
-        Click imgX, imgY
-        MouseMove origX, origY
-    } else
-        MyTooltip(notFoundMsg, 1500)
-}

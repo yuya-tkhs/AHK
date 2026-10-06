@@ -198,7 +198,7 @@ PremiereShortcutRows() {
 AiSoloShortcutRows() {
     rows := [["Alt + Enter", "MultiEditText（日本語入力ON）"]
         , ["Shift + PgDn / PgUp", "次 / 前のアートボードを表示して全選択"]
-        , ["Ctrl + Enter", "ダイアログのOKをクリック"]]
+        , ["Ctrl + Enter", "JSXダイアログを確定"]]
     for row in AiDirectShortcutRows()
         rows.Push(row)
     return rows

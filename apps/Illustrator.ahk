@@ -122,20 +122,45 @@ AiResultPoll() {
 +PgDn:: RunAiScriptAsync("display_next_artboard_and_select_all.jsx")
 +PgUp:: RunAiScriptAsync("display_prev_artboard_and_select_all.jsx")
 
-; MultiEditTextダイアログ表示中のみ Ctrl+Enter を上書き。
-; 画像でOKボタンを探してクリックし、カーソルを元の位置へ戻す。
-#HotIf WinActive("Multi-edit Text")
-^Enter:: ClickImageAndReturn(A_ScriptDir "\images\ai_OK.png", "OKボタンが見つかりません", 150)
+; JSXダイアログ表示中の Ctrl+Enter で確定する（AiDialogConfirm）。
+; どのダイアログかはタイトルで見分ける（部分一致。SetTitleMatchMode(2)）。
+; 対象のJSXはウィンドウの keydown で F13 を受けて OK と同じ処理をする（JSX側に1行ずつ足してある）。
+; 対象を増やすときは、JSX側に同じ F13 の受け口を足してから、ここにタイトルを足す。
+global AiConfirmDialogs := ["Multi-edit Text", "テキストプロパティ設定", "位置・サイズ"]
 
-; テキストプロパティ設定ダイアログ表示中のみ Ctrl+Enter を上書き（OK画像クリック＋カーソル復帰）
-#HotIf WinActive("テキストプロパティ設定")
-^Enter:: ClickImageAndReturn(A_ScriptDir "\images\ai_OK.png", "OKボタンが見つかりません", 150)
+IsAiConfirmDialog() {
+    global AiConfirmDialogs
+    for title in AiConfirmDialogs
+        if WinActive(title " ahk_exe Illustrator.exe")
+            return true
+    return false
+}
 
-; 位置・サイズダイアログ表示中のみ Ctrl+Enter を上書き（OK画像クリック＋カーソル復帰）
-#HotIf WinActive("位置・サイズ")
-^Enter:: ClickImageAndReturn(A_ScriptDir "\images\ai_OK.png", "OKボタンが見つかりません", 150)
+#HotIf IsAiConfirmDialog()
+^Enter:: AiDialogConfirm()
 
 #HotIf WinActive(exe_ai)
+
+; JSXダイアログを確定する。Ctrl+Enter をそのまま届けず F13 に置き換えて送る。
+; 以前は OK ボタンを画像認識でクリックしていた（端末が変わると外れる）。
+; Ctrl+Enter / F13 とも、変換中でなければどの入力欄・部品にフォーカスがあっても
+; ウィンドウの keydown に届くが、**日本語の変換中は IME に吸われて届かない**（実測）。
+; 「入力欄によって Ctrl+Enter が効いたり効かなかったりする」と見えていたのはこれ。
+; そこで変換中なら先に Enter で確定し、未確定文字列の窓が消えてから F13 を送る。
+; 変換中かどうかは、変換中だけ出る「MSCTFIME Composition」の窓で見る。
+; IsImeComposing()（IMM32）は別プロセスの入力欄だと常に 0 が返り使えない（実測）。
+; F13 にしたのは、どの入力欄も使わないキーなので JSX 側で誤爆しないため。
+AiDialogConfirm() {
+    static COMP := "ahk_class MSCTFIME Composition ahk_exe Illustrator.exe"
+    static TIMEOUT := 500
+    t0 := A_TickCount
+    if WinExist(COMP) {
+        Send("{Enter}")
+        while (WinExist(COMP) && A_TickCount - t0 < TIMEOUT)
+            Sleep(15)
+    }
+    Send("{F13}")
+}
 
 ; 2ストロークのメニュー定義。
 ; ツールチップの文言とキーの分岐を両方ここから生成するので、
