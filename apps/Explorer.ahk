@@ -62,7 +62,7 @@ ExplorerMenuText() {
         KeyWait(StrLower(key))
         switch key {
             case "Space":  Send("{F2}")
-            case "r":      Send("+{F10}p")
+            case "r":      RunPowerRename()
             case "t":      CreateTextFile()
             case "c":      RunGetExplorerPath()
             case "d":      MoveFileHere()
@@ -144,10 +144,57 @@ MoveFileHere() {
     }
 }
 
+; 開いているフォルダに空のテキストファイルを作り、名前の変更状態にする（2ストロークの t）。
+; 以前は背景の右クリックメニューをキー送り（新規作成 → ↑3回）でたどっていたが、
+; 「新規作成」の並びは入っているアプリで変わるため、ファイルを直接作るようにした。
 CreateTextFile() {
-    OpenBgMenu("w{Up 3}")
-    Sleep(250)
-    Send("{Enter}")
+    dir := GetCurrentExplorerPath()
+    if (dir = "") {
+        MyTooltip("作成先のフォルダを取得できませんでした", 2000)
+        return
+    }
+    dir := RTrim(dir, "\")
+    path := dir "\新しいテキスト ドキュメント.txt"
+    n := 1
+    while FileExist(path)           ; エクスプローラーと同じく「 (2)」から番号を振る
+        path := dir "\新しいテキスト ドキュメント (" (++n) ").txt"
+    try FileAppend("", path)
+    catch as err {
+        MyTooltip("テキストファイルを作成できませんでした`n" err.Message, 3000)
+        return
+    }
+    ; 作ったことをエクスプローラーへすぐ知らせる。知らせないと一覧に現れるまで約1秒、
+    ; 知らせると約0.5秒（実測。IFileOperation で作っても同じだった）
+    DllCall("shell32\SHChangeNotify", "int", 0x2, "uint", 0x5, "wstr", path, "ptr", 0)  ; SHCNE_CREATE, SHCNF_PATHW
+    if !SelectAndRename(path)
+        MyTooltip("テキストファイルを作成しました`n" path, 2000)
+}
+
+; path をエクスプローラーの一覧で選択し、名前の変更状態にする。
+; 作った直後は一覧にまだ現れていない（実測0.5〜1秒）ので、現れるまで待つ。
+; ファイルダイアログ（エクスプローラーのタブが無い）では false を返す。
+SelectAndRename(path) {
+    static SVSI_SELECT := 0x1, SVSI_EDIT := 0x3, SVSI_DESELECTOTHERS := 0x4, SVSI_ENSUREVISIBLE := 0x8, SVSI_FOCUSED := 0x10
+    tab := GetActiveExplorerTab()
+    if (tab = "")
+        return false
+    SplitPath(path, &name)
+    ; まず普通に選択して、一覧に現れたこと（フォーカスが移ったこと）を確かめてから
+    ; 名前の変更に入る。名前の変更中は FocusedItem が更新されないので、
+    ; いきなり SVSI_EDIT を付けると成功したかどうかを判定できない（実測）。
+    Loop 60 {                       ; 最大3秒
+        try {
+            if (item := tab.Document.Folder.ParseName(name)) {
+                tab.Document.SelectItem(item, SVSI_SELECT | SVSI_DESELECTOTHERS | SVSI_ENSUREVISIBLE | SVSI_FOCUSED)
+                if (tab.Document.FocusedItem.Path = path) {
+                    tab.Document.SelectItem(item, SVSI_EDIT)
+                    return true
+                }
+            }
+        }
+        Sleep(50)
+    }
+    return false
 }
 
 GetActiveExplorerTab() {
@@ -227,8 +274,10 @@ GetPathViaAddressBar() {
     return path
 }
 
-; クリップボードにコピーされているパスへアドレスバー経由で移動する。
+; クリップボードにコピーされているパスへ移動する。
 ; フォルダパスならそのフォルダへ、ファイルパスならその親フォルダへ移動する。
+; エクスプローラーではタブを直接移動させる（アドレスバーへのキー送りやクリップボードの
+; 書き換えをしない）。タブを持たないファイルダイアログだけアドレスバー経由にする。
 NavigateToClipboardPath() {
     raw := Trim(A_Clipboard, " `t`r`n`"")  ; 前後の空白・改行・引用符を除去
     if (raw = "") {
@@ -243,6 +292,12 @@ NavigateToClipboardPath() {
         MyTooltip("有効なパスではありません:`n" raw, 2500)
         return
     }
+    if ((tab := GetActiveExplorerTab()) != "") {
+        tab.Navigate2(target)
+        if (target != raw)          ; ファイルなら移動先でそのファイルを選ぶ
+            SelectAfterNavigate(tab, raw)
+        return
+    }
     Send("!d")          ; アドレスバーにフォーカス
     Sleep(120)
     Send("^a")          ; 既存テキストを全選択
@@ -253,21 +308,36 @@ NavigateToClipboardPath() {
     Send("{Enter}")     ; 移動
 }
 
+; 移動の完了を待ってから path を選択する（移動直後は前のフォルダの一覧のままのため）
+SelectAfterNavigate(tab, path) {
+    static SVSI_SELECT := 0x1, SVSI_DESELECTOTHERS := 0x4, SVSI_ENSUREVISIBLE := 0x8, SVSI_FOCUSED := 0x10
+    SplitPath(path, &name, &dir)
+    Loop 40 {                       ; 最大2秒
+        try {
+            if (tab.Document.Folder.Self.Path = dir && (item := tab.Document.Folder.ParseName(name))) {
+                tab.Document.SelectItem(item, SVSI_SELECT | SVSI_DESELECTOTHERS | SVSI_ENSUREVISIBLE | SVSI_FOCUSED)
+                return
+            }
+        }
+        Sleep(50)
+    }
+}
+
 ; 選択中のファイルを item.exe で開く（3ストロークの o）。
 ; 複数選択はまとめて1回の起動に渡す（Adobe系は起動済みならそのウィンドウで開く）。
 OpenSelectedWith(item) {
-    tab := GetActiveExplorerTab()
-    if (tab = "") {
+    selected := GetSelectedPaths()
+    if (selected = "") {
         MyTooltip("エクスプローラーのウィンドウで使ってください", 2000)
         return
     }
     paths := []
     args := ""
-    for it in tab.Document.SelectedItems {
-        if DirExist(it.Path)        ; フォルダはアプリに渡しても開けないので外す
+    for p in selected {
+        if DirExist(p)              ; フォルダはアプリに渡しても開けないので外す
             continue
-        paths.Push(it.Path)
-        args .= ' "' it.Path '"'
+        paths.Push(p)
+        args .= ' "' p '"'
     }
     if (paths.Length = 0) {
         MyTooltip("ファイルを選択してください", 2000)
@@ -282,30 +352,62 @@ OpenSelectedWith(item) {
 }
 
 ;;
-;; Googleドライブの右クリックメニューを画面に出さずに実行する
+;; 右クリックメニューの項目を、画面に出さずに名前で探して実行する
 ;;
-;;   右クリックの Google 項目は classic な IContextMenu ハンドラ
-;;  （DriveFS ContextMenu Handler / drivefsext.dll）が出している。これを直接作り、
-;;   画面に出さないメニューへ項目を入れさせてから、項目名で探して InvokeCommand する。
+;;   右クリックの項目の多くは classic な IContextMenu ハンドラが出している
+;;  （Googleドライブ = drivefsext.dll / PowerRename = PowerRenameExt）。
+;;   ハンドラを直接作り、画面に出さないメニューへ項目を入れさせてから、
+;;   項目名で探して InvokeCommand する（InvokeShellMenu）。
 ;;   キー送りや画像認識と違い、複数選択・ファイルとフォルダの違いでメニュー構成が
 ;;   変わっても、端末（DPI・テーマ）が変わっても壊れない。
-;;   シェル全体の右クリックメニューを作ると約340msかかるが、Driveのハンドラだけなら約31ms。
+;;   シェル全体の右クリックメニューを作ると約340msかかるが、ハンドラ単体なら約31ms。
 ;;   項目には動詞名（GetCommandString）が無いので、表示文字列で探すしかない。
 ;;;;
+
+global CLSID_DRIVEFS_MENU := "{EE15C2BD-CECB-49F8-A113-CA1BFC528F5B}"     ; DriveFS ContextMenu Handler
+global CLSID_POWERRENAME_MENU := "{0440049F-D1DC-4E46-B27B-98393D79486B}" ; PowerRenameExt
+
+; 選択中の項目のパス（エクスプローラーのタブが取れなければ ""、選択が無ければ空の配列）
+GetSelectedPaths() {
+    tab := GetActiveExplorerTab()
+    if (tab = "")
+        return ""
+    paths := []
+    for it in tab.Document.SelectedItems
+        paths.Push(it.Path)
+    return paths
+}
+
+; 選択中の項目を PowerRename で名前変更する（2ストロークの r）
+RunPowerRename() {
+    paths := GetSelectedPaths()
+    if (paths = "") {
+        MyTooltip("エクスプローラーのウィンドウで使ってください", 2000)
+        return
+    }
+    if (paths.Length = 0) {
+        MyTooltip("ファイルかフォルダを選択してください", 2000)
+        return
+    }
+    try status := InvokeShellMenu(paths, "PowerRename で名前を変更する", WinExist("A"), true, CLSID_POWERRENAME_MENU)
+    catch as err {
+        MyTooltip("PowerRename を起動できませんでした`n" err.Message, 3000)
+        return
+    }
+    if (status != "ok")
+        MyTooltip("PowerRename のメニューが見つかりません`n（PowerToys が起動していないか、表示名が変わった可能性があります）", 3000)
+}
 
 ; 選択中の項目に対して Googleドライブのメニュー項目を実行し、結果をツールチップに出す。
 ; item.result: "state" = オフライン/オンラインの切り替え（チェック状態で反映を確かめる）
 ;              "link"  = リンクのコピー（クリップボードに入ったリンクを出す）
 ;              "open"  = ブラウザや共有ダイアログが開くもの（依頼したことだけ知らせる）
 GDriveRun(item) {
-    tab := GetActiveExplorerTab()
-    if (tab = "") {
+    paths := GetSelectedPaths()
+    if (paths = "") {
         MyTooltip("エクスプローラーのウィンドウで使ってください", 2000)
         return
     }
-    paths := []
-    for it in tab.Document.SelectedItems
-        paths.Push(it.Path)
     if (paths.Length = 0) {
         MyTooltip("ファイルかフォルダを選択してください", 2000)
         return
@@ -323,7 +425,7 @@ GDriveRun(item) {
     }
 
     switch status {
-        case "notdrive":
+        case "empty":               ; Googleドライブ外のファイル
             MyTooltip("Googleドライブ上のファイルではありません`n" target, 2500)
         case "notfound":
             ; 共有・開く・リンクは1つだけ選んだときにしか出ない
@@ -363,13 +465,22 @@ GDriveTargetName(paths) {
     return (paths.Length > 1) ? name " ほか" (paths.Length - 1) "件" : name
 }
 
-; Googleドライブの右クリックメニューを画面に出さずに作り、cmdText の項目を実行する。
+; Googleドライブのハンドラで InvokeShellMenu する
+InvokeDriveMenu(paths, cmdText, hwnd := 0, invoke := true) {
+    return InvokeShellMenu(paths, cmdText, hwnd, invoke, CLSID_DRIVEFS_MENU)
+}
+
+; 右クリックメニューを画面に出さずに作り、cmdText の項目を実行する。
+; handler にハンドラのCLSIDを渡すとそのハンドラの項目だけを作る（速い）。
+; 省略するとシェル全体の右クリックメニュー（全ハンドラ＋標準の項目）を作る。
+; 項目名は「(&E)」や「&」を除いて比べるので、アクセラレータは書かなくてよい。
 ; invoke := false なら探すだけ（状態の確認用）。
-; 戻り値: "ok" / "already"（チェック済み＝すでにその状態）/ "notfound" / "notdrive"
+; 戻り値: "ok" / "already"（チェック済み＝すでにその状態）/ "notfound"
+;         / "empty"（文字のある項目が1つも無い＝そのハンドラの対象外。
+;           Googleドライブ外のファイルでも Drive のハンドラは区切り線だけ足す（実測））
 ; paths はすべて同じフォルダにあること（エクスプローラーの選択は必ずそうなる。
 ; 検索結果のように親が混ざると、2件目以降の相対IDが1件目の親と食い違う）。
-InvokeDriveMenu(paths, cmdText, hwnd := 0, invoke := true) {
-    static CLSID_DriveFSMenu := "{EE15C2BD-CECB-49F8-A113-CA1BFC528F5B}"
+InvokeShellMenu(paths, cmdText, hwnd := 0, invoke := true, handler := "") {
     static IID_IShellExtInit := "{000214E8-0000-0000-C000-000000000046}"
     static IID_IContextMenu  := "{000214E4-0000-0000-C000-000000000046}"
     static IID_IShellFolder  := "{000214E6-0000-0000-C000-000000000046}"
@@ -397,19 +508,23 @@ InvokeDriveMenu(paths, cmdText, hwnd := 0, invoke := true) {
 
         DllCall("shell32\SHBindToParent", "ptr", pidls[1], "ptr", GuidBuffer(IID_IShellFolder), "ptr*", &pSF := 0, "ptr", 0, "hresult")
         sf := ComValue(13, pSF)     ; 13 = VT_UNKNOWN。抜けるときに自動で Release される
-        ComCall(10, sf, "ptr", hwnd, "uint", paths.Length, "ptr", children
-            , "ptr", GuidBuffer(IID_IDataObject), "ptr", 0, "ptr*", &pDO := 0)  ; GetUIObjectOf
-        dataObj := ComValue(13, pDO)
-
-        ext := ComObject(CLSID_DriveFSMenu, IID_IShellExtInit)
-        ComCall(3, ext, "ptr", parent, "ptr", dataObj, "ptr", 0)               ; Initialize
-        cm := ComObjQuery(ext, IID_IContextMenu)
+        if (handler != "") {
+            ComCall(10, sf, "ptr", hwnd, "uint", paths.Length, "ptr", children
+                , "ptr", GuidBuffer(IID_IDataObject), "ptr", 0, "ptr*", &pDO := 0)  ; GetUIObjectOf
+            dataObj := ComValue(13, pDO)
+            ext := ComObject(handler, IID_IShellExtInit)
+            ComCall(3, ext, "ptr", parent, "ptr", dataObj, "ptr", 0)               ; Initialize
+            cm := ComObjQuery(ext, IID_IContextMenu)
+        } else {
+            ComCall(10, sf, "ptr", hwnd, "uint", paths.Length, "ptr", children
+                , "ptr", GuidBuffer(IID_IContextMenu), "ptr", 0, "ptr*", &pCM := 0)  ; GetUIObjectOf
+            cm := ComValue(13, pCM)
+        }
         hMenu := DllCall("CreatePopupMenu", "ptr")
         ComCall(3, cm, "ptr", hMenu, "uint", 0, "uint", ID_FIRST, "uint", 0x7FFF, "uint", 0)  ; QueryContextMenu
 
-        ; Googleドライブ外のファイルには区切り線（文字の無い項目）しか足されない（実測）
         if !MenuHasTextItem(hMenu)
-            return "notdrive"
+            return "empty"
         found := FindMenuItemByText(hMenu, cmdText)
         if !found
             return "notfound"
@@ -437,8 +552,10 @@ InvokeDriveMenu(paths, cmdText, hwnd := 0, invoke := true) {
 }
 
 ; メニュー（サブメニューも含む）から表示文字列が text の項目を探す。
+; 「(&E)」や「&」は除いて比べる（項目名にアクセラレータが付いていても付いていなくても当たる）。
 ; 戻り値: {id, checked} / 見つからなければ ""
 FindMenuItemByText(hMenu, text) {
+    text := StripMenuAccel(text)
     Loop DllCall("GetMenuItemCount", "ptr", hMenu, "int") {
         pos := A_Index - 1
         if (sub := DllCall("GetSubMenu", "ptr", hMenu, "int", pos, "ptr")) {
@@ -448,12 +565,17 @@ FindMenuItemByText(hMenu, text) {
         }
         buf := Buffer(512, 0)
         DllCall("GetMenuStringW", "ptr", hMenu, "uint", pos, "ptr", buf, "int", 256, "uint", 0x400)  ; MF_BYPOSITION
-        if (StrGet(buf) = text) {
+        if (StripMenuAccel(StrGet(buf)) = text) {
             state := DllCall("GetMenuState", "ptr", hMenu, "uint", pos, "uint", 0x400)
             return { id: DllCall("GetMenuItemID", "ptr", hMenu, "int", pos, "int"), checked: !!(state & 0x8) }  ; MF_CHECKED
         }
     }
     return ""
+}
+
+; メニュー項目名からアクセラレータの表記（末尾の「(&E)」と「&」）を除く
+StripMenuAccel(text) {
+    return Trim(RegExReplace(text, "\(&.\)$|&", ""))
 }
 
 ; 文字のある項目が1つでもあるか（区切り線だけなら false）
@@ -470,25 +592,6 @@ GuidBuffer(str) {
     return buf
 }
 
-OpenBgMenu( keysToSend := "" ) {
-    ; 1. アクティブなタブの選択を全解除（Win11タブ対応）
-    try {
-        tab := GetActiveExplorerTab()
-        if (tab != "") {
-            for item in tab.Document.SelectedItems {
-                tab.Document.SelectItem(item, 0)
-            }
-        }
-    }
-    Sleep(50)
-    ; 2. 背景の右クリックメニューを出す
-    Send("+{F10}")
-    Sleep(250)
-    ; 3. 引数で指定されたキーがあれば送信する
-    if (keysToSend != "") {
-        Send(keysToSend)
-    }
-}
 
 CreateFolders(folderNames) {
     basePath := GetCurrentExplorerPath()
