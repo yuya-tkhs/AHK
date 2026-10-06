@@ -139,7 +139,13 @@ FocusMotionField(target, label) {
 
 PrFindMotionField(h, target, label) {
     static MAX_TABS := 45, MAX_BACK := 12
-    Send("+1+5")                    ; 以前の p と同じく、プロジェクト → エフェクトコントロールの順に移る
+    ; エフェクトコントロールへはメニュー（ウィンドウ → …）を項目名で実行して移る。
+    ; ショートカット（以前は Shift+1 → Shift+5）だと Premiere 側で割り当てを変えたときに動かなくなるため。
+    ; 先にプロジェクトへ移るのは、エフェクトコントロールに居たままだと先頭に戻らず、
+    ; 今の欄の続きから Tab が進むため（実測。欄が入力状態のまま呼ぶと外れた）。
+    PrFocusProjectPanel(h)
+    PrSettleFocus(h)
+    MenuSelect(exe_pr, , "ウィンドウ", "エフェクトコントロール")
     PrSettleFocus(h)
     rows := []                      ; 見えている入力欄を行ごとに { y, xs: [x, …] }
     goal := "", cur := ""
@@ -148,6 +154,8 @@ PrFindMotionField(h, target, label) {
             continue
         if (rows.Length && rows[rows.Length].y = cur.y)
             rows[rows.Length].xs.Push(cur.x)
+        else if (rows.Length && cur.y < rows[rows.Length].y)
+            break                   ; 上の行に戻った＝一周した。行を数え違えている（途中の欄を見落とした）ので中止
         else
             rows.Push({ y: cur.y, xs: [cur.x] })
         if (rows.Length >= 2 && rows[1].xs.Length < 2)
@@ -168,6 +176,19 @@ PrFindMotionField(h, target, label) {
     MyTooltip("「" label "」の欄が見つかりません`nクリップを選択し、エフェクトコントロールで「モーション」を開いてください", 3000)
 }
 
+; 作業中のプロジェクトのパネルへ移る（Shift+1 と同じ）。
+; メニューの「ウィンドウ → プロジェクト」はサブメニューで、開いているプロジェクトの
+; ファイル名（「名称未設定.prproj」）が並ぶ。作業中のものはウィンドウタイトル
+; （「Adobe Premiere - <フルパス>.prproj *」）から取り出す。取り出せなければ Shift+1 に頼る。
+PrFocusProjectPanel(h) {
+    if RegExMatch(WinGetTitle(h), "([^\\]+\.prproj)", &m) {
+        try {
+            MenuSelect(exe_pr, , "ウィンドウ", "プロジェクト", m[1])
+            return
+        }
+    }
+    Send("+1")
+}
 ; ここまでに見えた行から目的の欄の位置 {x, y} が決まれば返す（まだ決まらなければ ""）
 PrMotionGoal(rows, target) {
     pairs := []                     ; 欄が2つ並ぶ行の番号
@@ -196,11 +217,13 @@ PrMotionGoal(rows, target) {
 ; Premiere が反応する前に「動かない＝着地」と判定しないよう、まず前の窓から
 ; フォーカスが離れるのを待つ。入力欄（Edit）は欄ごとに作り直されるので、入力欄からの
 ; 移動なら必ず窓が変わる（上限200ms）。入力欄以外の停止位置はパネル本体の窓のままで、
-; 続くと動かないので待ちを短くする。入力欄以外から入力欄へ移るときの反応は最大32ms
-; （実測）なので上限45ms。一律200msだと、入力欄以外が続く区間で毎回上限まで待ち、
-; 不透明度まで約2秒かかっていた（実測）。
+; 続くと動かないので待ちを短くする。一律200msだと、入力欄以外が続く区間で毎回上限まで待ち、
+; 不透明度まで約2秒かかっていた（実測）。入力欄以外から入力欄へ移るときの反応は普段は
+; 最大32msだが、45msにしたら1度見落とし（入力欄を待ちきれずパネルを着地と判定）、
+; 行を数え違えて別の欄に着地した。上限まで待つのはフォーカスが動かない停止位置
+; （1巡に2回）だけなので、余裕を見て100msにする。
 PrSendAndSettle(h, keys) {
-    static FROM_EDIT := 200, FROM_OTHER := 45
+    static FROM_EDIT := 200, FROM_OTHER := 100
     prev := 0
     try prev := ControlGetFocus(h)
     limit := FROM_OTHER
