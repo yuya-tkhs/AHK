@@ -172,6 +172,109 @@ CleanUrl(text) {
     return url
 }
 
+;;
+;; 2/3ストロークメニューの共通部品（Illustrator / エクスプローラー）
+;;
+;;   グループは { key, label, items }、項目は { key, label, disp?, direct? } の形で持つ。
+;;   項目にはこれ以外に各アプリが実行内容（jsx / cmd など）を自由に足してよい。
+;;;;
+
+; 項目の表示用キー（矢印は disp に "←" などを持たせる）
+MenuItemDisp(item) {
+    return item.HasOwnProp("disp") ? item.disp : item.key
+}
+MenuItemIsDirect(item) {
+    return item.HasOwnProp("direct") && item.direct
+}
+
+; 第1階層のツールチップに足すグループ欄。全項目を、実際に打つキー列そのままで並べる。
+; direct の項目は第2打鍵だけで動くので短い方を出し、それ以外は
+; 「グループキー + 項目キー」の3ストロークを出す。
+; 降りてから選ぶ前に何が入っているか分かるよう、第3打鍵まで見せる。
+BuildGroupMenuLines(groups) {
+    text := ""
+    for group in groups {
+        text .= "`n- - - - - - - - - - - - - - - -`n" group.label " [" group.key "]"
+        for item in group.items {
+            seq := MenuItemIsDirect(item) ? MenuItemDisp(item) : group.key " " MenuItemDisp(item)
+            text .= "`n" seq ": " item.label
+        }
+    }
+    return text
+}
+
+; 第2階層（サブメニュー）のツールチップ。1行目をパンくずにする
+BuildSubMenuText(group) {
+    text := "2ストローク > " group.label "（10秒）"
+    text .= "`n- - - - - - - - - - - - - - - -"
+    for item in group.items
+        text .= "`n" MenuItemDisp(item) ": " item.label
+    return text "`n- - - - - - - - - - - - - - - -`nBS: 戻る / Esc: キャンセル"
+}
+
+; InputHookのEndKey指定を組み立てる。
+; 矢印のような文字にならないキーはEndKeyにしないと拾えないため、
+; そのグループの項目から自動で拾う（1文字のキーは通常の文字入力で取れる）。
+BuildMenuEndKeys(group, allowBack) {
+    keys := allowBack ? "{Escape}{Space}{Backspace}" : "{Escape}{Space}"
+    if (group)
+        for item in group.items
+            if (StrLen(item.key) > 1)
+                keys .= "{" item.key "}"
+    return keys
+}
+
+; 押されたキーに対応するグループを返す（無ければ ""）
+FindMenuGroup(groups, key) {
+    for group in groups
+        if (group.key == key)
+            return group
+    return ""
+}
+
+; グループ内で押されたキーに対応する項目を返す（無ければ ""）。
+; == で大文字小文字を区別する（e と E を分けるため）
+FindGroupItem(group, key) {
+    for item in group.items
+        if (item.key == key)
+            return item
+    return ""
+}
+
+; メニューを出してキーを1つ読む。Escapeとタイムアウトは "" を返す。
+; 「戻る」を許すと Backspace をそのまま返す。
+; フックはツールチップを描く「前」に張る。Wait()が返ってから次のStartまでの
+; 隙間に押されたキーはアプリへ素通りし、単キーがツール切替などに化けるため。
+ReadMenuKey(menuText, allowBack := false, group := "", timeoutSec := 10) {
+    ih := InputHook("L1 T" timeoutSec)
+    ; "S"（Suppress）が要る。InputHook は文字キーを抑制するが、矢印のような
+    ; 非文字キーは既定（VisibleNonText）で素通しするため、EndKeyに指定しただけでは
+    ; アプリにも届く。Illustratorではオブジェクトが動き、Backspace は選択中の
+    ; オブジェクトを削除する。エクスプローラーの BS（→ Del）ホットキーより
+    ; InputHook が先に捕捉することは実測確認済み（ファイルは消えない）。
+    ih.KeyOpt(BuildMenuEndKeys(group, allowBack), "SE")
+    ih.Start()
+    MyTooltip(menuText, timeoutSec * 1000)
+    ih.Wait()
+    MyTooltip()
+    if (ih.EndReason = "Timeout")
+        return ""
+    key := (ih.EndReason = "EndKey") ? ih.EndKey : ih.Input
+    return (key = "Escape") ? "" : key
+}
+
+; サブメニューを出して項目を1つ選ばせる。
+; 戻り値: 項目 / "Backspace"（第1階層へ戻る）/ ""（キャンセル・タイムアウト・無効なキー）
+ReadSubMenuItem(group) {
+    key := ReadMenuKey(BuildSubMenuText(group), true, group)
+    if (key = "" || key = "Backspace")
+        return key
+    if (item := FindGroupItem(group, key))
+        return item
+    MyTooltip("無効なキーです", 500)
+    return ""
+}
+
 ; variation: 色の許容誤差（0-255）。大きいほど判定がゆるくなる
 ClickImageAndReturn(imgPath, notFoundMsg, variation := 100) {
     if ImageSearch(&imgX, &imgY, 0, 0, A_ScreenWidth, A_ScreenHeight, "*" variation " " imgPath) {

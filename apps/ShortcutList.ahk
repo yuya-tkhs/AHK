@@ -129,7 +129,7 @@ AiShortcutRows() {
     for group in AiMenu {
         rows.Push([group.key, group.label])
         for item in group.items
-            rows.Push(["　└ " AiItemDisp(item), "　" item.label])
+            rows.Push(["　└ " MenuItemDisp(item), "　" item.label])
     }
     rows.Push(["Space", "JSXランチャー"])
     for row in MenuTextRows(KnobMenuText("adobe"))   ; ツールチップの末尾と同じノブの欄
@@ -177,7 +177,7 @@ AppShortcutSections(app) {
             return [{ title: "Illustrator 2/3ストローク（Ctrl + Space 短押し）", rows: AiShortcutRows() }
                   , { title: "Illustrator 単独", rows: AiSoloShortcutRows() }]
         case "explorer":
-            return [{ title: "エクスプローラー 2ストローク（Ctrl + Space）", rows: MenuTextRows(ExplorerMenuText()) }
+            return [{ title: "エクスプローラー 2/3ストローク（Ctrl + Space）", rows: MenuTextRows(ExplorerMenuText()) }
                   , { title: "エクスプローラー 単独", rows: [["BS", "削除（一覧にフォーカス時）"]] }]
     }
     return []
@@ -213,7 +213,7 @@ AiDirectShortcutRows() {
     for group in AiDirectKeys {
         rows.Push([group.modDisp " +", group.label])
         for item in group.items
-            rows.Push(["　└ " AiItemDisp(item), "　" item.label])
+            rows.Push(["　└ " MenuItemDisp(item), "　" item.label])
     }
     return rows
 }

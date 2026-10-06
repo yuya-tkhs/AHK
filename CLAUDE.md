@@ -17,7 +17,7 @@ apps/
   IllustratorLauncher.ahk  # JSXを一覧から選んで実行するランチャー
   AdobeCommon.ahk          # Adobe共通の Ctrl+Enter 後処理をアプリ別に振り分け
 lib/
-  Functions.ahk            # 共通関数（MyTooltip, WrapText, IsUrl, CleanUrl, ClickImageAndReturn）
+  Functions.ahk            # 共通関数（MyTooltip, WrapText, 2/3ストロークメニュー, IsUrl, CleanUrl, ClickImageAndReturn）
   Hotstring.ahk            # テキスト展開（ddd → 今日の日付MMDD / ttt → tkhs）
   Mouse.ahk                # 中クリックスクロール
   ScrollKeys.ahk           # F23/F24 によるキー加速スクロール
@@ -44,7 +44,7 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 | 対象 | トリガー | 備考 |
 |------|----------|------|
 | グローバル（Common.ahk） | `vk1D + Space` | メニュー表示・入力待ちとも10秒（他の2ストロークも同じ） |
-| Explorer（Explorer.ahk） | `Ctrl + Space` | ファイルダイアログでも有効（`IsFileDialog()`で判定） |
+| Explorer（Explorer.ahk） | `Ctrl + Space` | ファイルダイアログでも有効（`IsFileDialog()`で判定）。**3ストローク対応**（下記） |
 | Premiere（Premiere.ahk） | `Ctrl + Space` | ファイルダイアログ中は無効 |
 | Illustrator（Illustrator.ahk） | `Ctrl + Space` | 0.3秒以内の短押しのみ起動。長押しはAiにそのまま渡す。**3ストローク対応**（下記） |
 
@@ -66,9 +66,44 @@ images/                    # ImageSearch 用の参照画像（ai_OK.png 等）
 - 第1階層のツールチップには**実際に打つキー列をそのまま並べる**（`a f: 移動` のように第3打鍵まで出す）。降りる前に中身が分かるようにするため。`direct` の項目だけは短い方（第2打鍵）を出す
 - サブメニューは `Backspace` で第1階層へ戻る。`Escape` は全キャンセル
 - `direct: true` を付けると第1階層のメニューにも並び、第2打鍵だけで起動できる。頻用になった項目はこれで「昇格」させる
-- **矢印のように文字にならないキーは `InputHook` の `EndKey` にしないと拾えない。** `BuildAiEndKeys()` が項目キーの文字数（2文字以上＝特殊キー）から自動で組み立てる（整列・文字揃えを外した今、`AiMenu` に矢印は残っていないが、また入れたときのために仕組みは残してある）
+- **矢印のように文字にならないキーは `InputHook` の `EndKey` にしないと拾えない。** `BuildMenuEndKeys()` が項目キーの文字数（2文字以上＝特殊キー）から自動で組み立てる（整列・文字揃えを外した今、`AiMenu` に矢印は残っていないが、また入れたときのために仕組みは残してある）
 - **`KeyOpt` には `"SE"` と `S`（Suppress）を必ず付ける。** `InputHook` は文字キーを抑制するが、矢印のような非文字キーは既定（`VisibleNonText`）で素通しするため、`EndKey` に指定しただけでは Illustrator にも届く。矢印はオブジェクトが動き、**Backspace は選択中のオブジェクトを削除する**。実測：`"E"` だけだと漏れ、`"SE"` で漏れゼロ
-- `ReadAiMenuKey()` は**ツールチップを描く前にフックを張る**。`Wait()` が返ってから次の `Start()` までの隙間に押されたキーはIllustratorへ素通りし、単キーがツール切替に化けるため
+- `ReadMenuKey()` は**ツールチップを描く前にフックを張る**。`Wait()` が返ってから次の `Start()` までの隙間に押されたキーはIllustratorへ素通りし、単キーがツール切替に化けるため
+
+#### 3ストロークの共通部品（lib/Functions.ahk）
+
+Illustrator とエクスプローラーの3ストロークは同じ関数で動く。グループは `{ key, label, items }`、項目は `{ key, label, disp?, direct? }` の形で持ち、実行内容（`jsx` / `cmd` / `exe` など）は各アプリが項目に自由に足す。
+
+| 関数 | 役割 |
+|------|------|
+| `ReadMenuKey()` | メニューを出してキーを1つ読む（Escape・タイムアウトは `""`、`allowBack` なら `Backspace` を返す） |
+| `ReadSubMenuItem(group)` | サブメニューを出して項目を返す（`"Backspace"` = 戻る / `""` = キャンセル・無効なキー） |
+| `BuildGroupMenuLines(groups)` | 第1階層に足すグループ欄（`g t: …` のように実際に打つキー列で並べる） |
+| `BuildSubMenuText(group)` | サブメニューのツールチップ（パンくず＋`BS: 戻る / Esc: キャンセル`） |
+| `FindMenuGroup()` / `FindGroupItem()` | 押されたキーからグループ・項目を引く（大文字小文字を区別） |
+
+- 新しいアプリに3ストロークを足すときは、グループ配列を作り、2ストロークのループで `FindMenuGroup` → `ReadSubMenuItem` → `Backspace` なら `continue` の形にする（`apps/Explorer.ahk` の `^Space` が最小の例）
+
+#### エクスプローラーの3ストローク
+
+メニューは `ExplorerMenu`（apps/Explorer.ahk 冒頭の配列）1か所で定義する。グループごとに `run`（項目を1つ受け取る関数）を持たせて実行を振り分ける。
+
+| 第2打鍵 | 内容 |
+|---------|------|
+| `o` | アプリケーションで開く（`p` Photoshop / `i` Illustrator / `a` Audition） |
+| `g` | Googleドライブ（`t` オフラインで使用可能にする / `f` オンラインでのみ使用可能にする / `s` 共有 / `o` ドライブで開く / `c` リンクをコピー） |
+
+- 対象はエクスプローラーで選択中の項目（`GetActiveExplorerTab()` の `SelectedItems`）。ファイルダイアログでは選択を取れないので使えない旨を出す
+- **アプリは実行ファイル名だけで起動する**（`Run('"Photoshop.exe" "…"')`）。Windows の App Paths に登録されているので、年版のインストール先（`Adobe Photoshop 2026` など）を書かずに済む。フォルダは渡しても開けないので外す。複数選択は1回の起動にまとめる
+- **Googleドライブの操作は右クリックメニューを画面に出さずに実行する**（`InvokeDriveMenu()`）。右クリックの Google 項目は classic な `IContextMenu` ハンドラ（`DriveFS ContextMenu Handler` / CLSID `{EE15C2BD-CECB-49F8-A113-CA1BFC528F5B}` / drivefsext.dll）なので、これを直接作って `IShellExtInit::Initialize` → `QueryContextMenu`（隠し `HMENU`）→ 項目名で探す → `InvokeCommand` と進める
+  - キー送り・画像認識と違い、複数選択やファイル／フォルダの違いでメニュー構成が変わっても、端末（DPI・テーマ）が変わっても壊れない。実行は実測約15〜30ms（シェル全体の右クリックメニューを作ると約340ms）
+  - 項目には動詞名（`GetCommandString`）が無いので**表示文字列で探すしかない**。Googleドライブの更新で文言が変わったら `ExplorerMenu` の `cmd` を直す（見つからないときはツールチップで知らせる）
+  - 複数選択では Google 項目が「オフライン アクセス」だけになる。共有・開く・リンクは1件選択のときだけ使える
+  - オフライン／オンラインは**チェック状態で現在の状態が分かる**。実行前にチェック済みなら「すでに〜」、実行後はチェックが付いたかで反映を確かめる（実測では直後に反映済み）
+  - Googleドライブ外のファイルでもハンドラは区切り線を2本足す（実測）。項目数ではなく「文字のある項目があるか」（`MenuHasTextItem()`）で判定する
+  - 作ったばかりのファイルは同期が済むまで共有・開く・リンクが出ない（実測。オフライン アクセスは出る）
+  - リンクのコピーはクリップボードを空にしてから実行し、`ClipWait` で入ったリンクをツールチップに出す（取れなければ元のクリップボードに戻す）
+- サブメニューの `Backspace`（戻る）は、エクスプローラーの `BS`（→ `Del`）ホットキーより先に `InputHook` が捕捉する（実測確認済み。ファイルは消えない）
 
 #### Premiere のメニューコマンド実行
 
@@ -113,7 +148,7 @@ MenuSelect(exe_pr, , "グラフィックとタイトル", "キャプションを
 | `Ctrl + Alt` + `←→↑↓` / `c` / `m` | 整列（各方向 / 水平中央 / 垂直中央） |
 | `Ctrl + Alt + Shift` + `←` / `→` / `c` | 文字揃え（左 / 右 / 中央） |
 
-- 項目の形は `AiMenu` と同じ（`key` / `disp` / `label` / `jsx` or `menucmd`）なので `AiItemAction()` / `AiItemDisp()` をそのまま使い回せる
+- 項目の形は `AiMenu` と同じ（`key` / `disp` / `label` / `jsx` or `menucmd`）なので `AiItemAction()` / `MenuItemDisp()` をそのまま使い回せる
 - 登録はロード時の `#HotIf` ではなく実行時の `HotIfWinActive(exe_ai)` ＋ `Hotkey()` で回す（ランチャーの `Up` / `Down` と同じやり方）。終わったら `HotIf()` で条件を戻す
 - **コールバックは `AiDirectCallback()` の中で作る。** ホットキーのコールバックには押されたキー名が渡されるので `AiItemAction()` の返す `BoundFunc` を直に渡すと引数が多すぎてエラーになる。また閉包をトップレベルの `for` の中で作るとループ変数がグローバル参照になり、全部が最後の項目になる
 - ランチャーの一覧（`BuildAiLauncherItems()`）は `AiMenu` と `AiDirectKeys` の両方を並べる。**整列はメニューコマンドで対応するJSXファイルが無いため**、拾い漏らすとランチャーからも消えてしまう

@@ -171,7 +171,7 @@ global AiMenu := [
 ; 修飾キー付きの単独ホットキーに割り当てた項目（整列・文字揃え）。
 ; もとは2ストロークのサブメニュー（s / j）に置いていたが、連続で使うものなので
 ; 3打鍵は多すぎた。押しっぱなしのまま方向だけ変えられる直接キーへ移した。
-; 項目の形は AiMenu と同じなので AiItemAction / AiItemDisp をそのまま使える。
+; 項目の形は AiMenu と同じなので AiItemAction / MenuItemDisp をそのまま使える。
 ; ホットキーの登録・ランチャーの一覧・ショートカット一覧を全てここから作るので、
 ; 追加・変更はこの配列だけを直せばよい（AiMenu と同じ方針）。
 ; mod は AHK の修飾キー記号（^ = Ctrl / ! = Alt / + = Shift）。
@@ -229,38 +229,10 @@ AiItemName(item) {
     return item.HasOwnProp("menucmd") ? item.menucmd : item.jsx
 }
 
-; 項目の表示用キー（矢印は disp に "←" などを持たせてある）
-AiItemDisp(item) {
-    return item.HasOwnProp("disp") ? item.disp : item.key
-}
-AiItemIsDirect(item) {
-    return item.HasOwnProp("direct") && item.direct
-}
-
-; 第1階層のツールチップ。全項目を、実際に打つキー列そのままで並べる。
-; direct の項目は第2打鍵だけで動くので短い方を出し、それ以外は
-; 「グループキー + 項目キー」の3ストロークを出す。
-; 降りてから選ぶ前に何が入っているか分かるよう、第3打鍵まで見せる。
+; 第1階層のツールチップ。グループ欄は共通の BuildGroupMenuLines で組み立てる
 BuildAiMenuText(title) {
     global AiMenu
-    text := title
-    for group in AiMenu {
-        text .= "`n- - - - - - - - - - - - - - - -`n" group.label " [" group.key "]"
-        for item in group.items {
-            seq := AiItemIsDirect(item) ? AiItemDisp(item) : group.key " " AiItemDisp(item)
-            text .= "`n" seq ": " item.label
-        }
-    }
-    return text
-}
-
-; 第2階層（サブメニュー）のツールチップ。1行目をパンくずにする
-BuildAiSubMenuText(group) {
-    text := "2ストローク > " group.label "（10秒）"
-    text .= "`n- - - - - - - - - - - - - - - -"
-    for item in group.items
-        text .= "`n" AiItemDisp(item) ": " item.label
-    return text "`n- - - - - - - - - - - - - - - -`nBS: 戻る / Esc: キャンセル"
+    return title BuildGroupMenuLines(AiMenu)
 }
 
 ; 第1階層の末尾に出す案内。Space は EndKey に入っているだけで未割当だったので
@@ -269,69 +241,13 @@ AiMenuFooter() {
     return "`n- - - - - - - - - - - - - - - -`nSpace: ランチャー（一覧から選ぶ）" KnobMenuText("adobe")
 }
 
-; InputHookのEndKey指定を組み立てる。
-; 矢印のような文字にならないキーはEndKeyにしないと拾えないため、
-; そのグループの項目から自動で拾う（1文字のキーは通常の文字入力で取れる）。
-BuildAiEndKeys(group, allowBack) {
-    keys := allowBack ? "{Escape}{Space}{Backspace}" : "{Escape}{Space}"
-    if (group)
-        for item in group.items
-            if (StrLen(item.key) > 1)
-                keys .= "{" item.key "}"
-    return keys
-}
-
-; 押されたキーに対応する項目を返す（無ければ ""）。
-; group を渡すとそのグループ内だけを探す。
-; group 省略時＝第1階層なので、direct の項目だけを対象にする。
-FindAiMenuItem(key, group := "") {
-    global AiMenu
-    for g in (group ? [group] : AiMenu)
-        for item in g.items {
-            if (!group && !AiItemIsDirect(item))
-                continue
-            if (item.key == key)    ; == で大文字小文字を区別（e と E を分ける）
-                return item
-        }
-    return ""
-}
-
-; 押されたキーに対応するグループを返す（無ければ ""）
-FindAiGroup(key) {
+; 第1階層で押されたキーに対応する direct の項目を返す（無ければ ""）
+FindAiDirectItem(key) {
     global AiMenu
     for group in AiMenu
-        if (group.key == key)
-            return group
+        if ((item := FindGroupItem(group, key)) && MenuItemIsDirect(item))
+            return item
     return ""
-}
-
-; メニューを出してキーを1つ読む。Escapeとタイムアウトは "" を返す。
-; 「戻る」を許すと Backspace をそのまま返す。
-; フックはツールチップを描く「前」に張る。Wait()が返ってから次のStartまでの
-; 隙間に押されたキーはIllustratorへ素通りし、単キーがツール切替に化けるため。
-ReadAiMenuKey(menuText, allowBack := false, group := "", timeoutSec := 10) {
-    ih := InputHook("L1 T" timeoutSec)
-    ; "S"（Suppress）が要る。InputHook は文字キーを抑制するが、矢印のような
-    ; 非文字キーは既定（VisibleNonText）で素通しするため、EndKeyに指定しただけでは
-    ; Illustrator にも届いてオブジェクトが動いてしまう。Escape や Backspace も同様で、
-    ; 特に Backspace は選択中のオブジェクトを削除してしまう。
-    ih.KeyOpt(BuildAiEndKeys(group, allowBack), "SE")
-    ih.Start()
-    MyTooltip(menuText, timeoutSec * 1000)
-    ih.Wait()
-    MyTooltip()
-    if (ih.EndReason = "Timeout")
-        return ""
-    key := (ih.EndReason = "EndKey") ? ih.EndKey : ih.Input
-    return (key = "Escape") ? "" : key
-}
-
-; 選んだ項目を実行する。該当が無ければ知らせるだけ。
-RunAiMenuItem(key, group := "") {
-    if (item := FindAiMenuItem(key, group))
-        AiItemAction(item).Call()
-    else
-        MyTooltip("無効なキーです", 500)
 }
 
 ; 2ストローク（0.3秒以内の短押しのみ起動・長押しはIllustratorにそのまま渡す）
@@ -352,7 +268,7 @@ $~^Space:: {
     ; 出るのがその分遅れるため。
     ; （KeyWaitはAHKのスレッドを止めるだけでキーを抑制しないので、外しても取りこぼしは増えない）
     loop {
-        key := ReadAiMenuKey(BuildAiMenuText("2ストローク待機中（10秒）") AiMenuFooter())
+        key := ReadMenuKey(BuildAiMenuText("2ストローク待機中（10秒）") AiMenuFooter())
         if (key = "")               ; Escape かタイムアウト
             return
         if (key = "Space") {        ; 一覧から選ぶランチャーを開く
@@ -360,16 +276,19 @@ $~^Space:: {
             return
         }
         ; グループキーならサブメニューへ降りる
-        if (group := FindAiGroup(key)) {
-            subKey := ReadAiMenuKey(BuildAiSubMenuText(group), true, group)
-            if (subKey = "")
-                return
-            if (subKey = "Backspace")
+        if (group := FindMenuGroup(AiMenu, key)) {
+            item := ReadSubMenuItem(group)
+            if (item = "Backspace")
                 continue             ; 第1階層へ戻る
-            RunAiMenuItem(subKey, group)
+            if (item != "")
+                AiItemAction(item).Call()
             return
         }
-        RunAiMenuItem(key)           ; 従来どおりの2打鍵
+        ; 従来どおりの2打鍵（direct の項目）
+        if (item := FindAiDirectItem(key))
+            AiItemAction(item).Call()
+        else
+            MyTooltip("無効なキーです", 500)
         return
     }
 }

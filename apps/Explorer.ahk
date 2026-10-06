@@ -1,7 +1,32 @@
 #HotIf WinActive("ahk_class CabinetWClass") or IsFileDialog()
 
+; 3ストロークのグループ（Illustrator の AiMenu と同じ形）。
+; 第1階層の文言・サブメニュー・ショートカット一覧はすべてここから作るので、
+; 追加・変更はこの配列だけを直せばよい。
+; run はそのグループの項目を実行する関数（選んだ項目を1つ受け取る）。
+;
+; g: cmd は Googleドライブの右クリックメニューに出る項目名そのもの（表示文字列で探すため、
+;    Googleドライブの更新で文言が変わったらここを直す）。
+;    result は実行後にツールチップへ出す結果の種類（GDriveRun を参照）。
+; o: exe は実行ファイル名だけで書く。Windows の App Paths に登録されているので
+;    インストール先（「Adobe Photoshop 2026」のような年版フォルダ）を書かずに済み、
+;    バージョンが上がっても端末が変わっても直さなくてよい。
+global ExplorerMenu := [
+    { key: "o", label: "アプリケーションで開く", run: OpenSelectedWith, items: [
+        { key: "p", label: "Photoshop",   exe: "Photoshop.exe" },
+        { key: "i", label: "Illustrator", exe: "Illustrator.exe" },
+        { key: "a", label: "Audition",    exe: "Adobe Audition.exe" } ] },
+    { key: "g", label: "Googleドライブ", run: GDriveRun, items: [
+        { key: "t", label: "オフラインで使用可能にする",     cmd: "オフラインで使用可能にする",     result: "state" },
+        { key: "f", label: "オンラインでのみ使用可能にする", cmd: "オンラインでのみ使用可能にする", result: "state" },
+        { key: "s", label: "共有",                           cmd: "Google ドライブで共有",           result: "open" },
+        { key: "o", label: "ドライブで開く",                 cmd: "Google ドライブで開く",           result: "open" },
+        { key: "c", label: "リンクをコピー",                 cmd: "リンクをクリップボードにコピー", result: "link" } ] }
+]
+
 ; メニューの文言は関数にまとめる（ShortcutList.ahk がこの文字列を読んで一覧に並べる）
 ExplorerMenuText() {
+    global ExplorerMenu
     return "
     (
     2ストローク待機中（10秒）
@@ -10,46 +35,45 @@ ExplorerMenuText() {
     r: PowerRename
     t: テキストファイルの作成
     c: 開いているフォルダのパスを取得
-    g: Googleドライブの設定変更
     d: Downloadsの最新ファイルを移動
     v: コピーしたパスへ移動
     - - - - - - - - - - - - - - - -
     1: 動画フォルダの作成
     2: Original, Proxy
-    )" . KnobMenuText("explorer")
+    )" . BuildGroupMenuLines(ExplorerMenu) . KnobMenuText("explorer")
 }
 
-; 2ストローク
+; 2/3ストローク
 ^Space:: {
-    MyTooltip(ExplorerMenuText(), 10000)
-    ih := InputHook("L1 T10") ; 次の1文字を待機 (L1: 1文字入力で終了, T10: 10秒でタイムアウト)
-    ih.KeyOpt("{Escape}{Space}", "E")
-    ih.Start()
-    ih.Wait()
-    MyTooltip()
-    if (ih.EndReason = "Timeout") {
+    loop {
+        key := ReadMenuKey(ExplorerMenuText())
+        if (key = "")               ; Escape かタイムアウト
+            return
+        ; グループキーならサブメニューへ降りる
+        if (group := FindMenuGroup(ExplorerMenu, key)) {
+            item := ReadSubMenuItem(group)
+            if (item = "Backspace")
+                continue             ; 第1階層へ戻る
+            if (item != "")
+                group.run.Call(item)
+            return
+        }
+        ; 物理キーから指が離れるまで待機（Sendと物理キーの衝突を防ぐ）
+        KeyWait(StrLower(key))
+        switch key {
+            case "Space":  Send("{F2}")
+            case "r":      Send("+{F10}p")
+            case "t":      CreateTextFile()
+            case "c":      RunGetExplorerPath()
+            case "d":      MoveFileHere()
+            case "v":      NavigateToClipboardPath()
+            case "1":      CreateFolders(["01_Master","02_Assets","03_Works","04_Projects","05_Render"])
+            case "2":      CreateFolders(["Original","Proxy"])
+            default:       MyTooltip("無効なキーです", 500)
+        }
         return
     }
-    capturedKey := (ih.EndReason = "EndKey") ? ih.EndKey : ih.Input
-    ; 物理キーから指が離れるまで待機（Sendと物理キーの衝突を防ぐ）
-    if (capturedKey != "") {
-        KeyWait(StrLower(capturedKey))
-    }
-    switch capturedKey {
-        case "Escape": return
-        case "Space":  Send("{F2}")
-        case "r":      Send("+{F10}p")
-        case "t":      CreateTextFile()
-        case "c":      RunGetExplorerPath()
-        case "g":      GDriveOnline()
-        case "d":      MoveFileHere()
-        case "v":      NavigateToClipboardPath()
-        case "1":      CreateFolders(["01_Master","02_Assets","03_Works","04_Projects","05_Render"])
-        case "2":      CreateFolders(["Original","Proxy"])
-        default:       MyTooltip("無効なキーです", 500)
-    }
 }
-
 
 
 MoveFileHere() {
@@ -118,12 +142,6 @@ MoveFileHere() {
     } catch as err {
         MsgBox("ファイルの移動に失敗しました:`n" . err.Message)
     }
-}
-
-GDriveOnline() {
-    Send("+{F10}")
-    Sleep(250)
-    Send("{g 2}{Up 2}{Right}{Down}{Up}")
 }
 
 CreateTextFile() {
@@ -233,6 +251,223 @@ NavigateToClipboardPath() {
     Send("^v")
     Sleep(80)
     Send("{Enter}")     ; 移動
+}
+
+; 選択中のファイルを item.exe で開く（3ストロークの o）。
+; 複数選択はまとめて1回の起動に渡す（Adobe系は起動済みならそのウィンドウで開く）。
+OpenSelectedWith(item) {
+    tab := GetActiveExplorerTab()
+    if (tab = "") {
+        MyTooltip("エクスプローラーのウィンドウで使ってください", 2000)
+        return
+    }
+    paths := []
+    args := ""
+    for it in tab.Document.SelectedItems {
+        if DirExist(it.Path)        ; フォルダはアプリに渡しても開けないので外す
+            continue
+        paths.Push(it.Path)
+        args .= ' "' it.Path '"'
+    }
+    if (paths.Length = 0) {
+        MyTooltip("ファイルを選択してください", 2000)
+        return
+    }
+    try {
+        Run('"' item.exe '"' args)
+        MyTooltip(item.label " で開いています`n" GDriveTargetName(paths), 2000)
+    } catch as err {
+        MyTooltip(item.label " を起動できませんでした`n" err.Message, 3000)
+    }
+}
+
+;;
+;; Googleドライブの右クリックメニューを画面に出さずに実行する
+;;
+;;   右クリックの Google 項目は classic な IContextMenu ハンドラ
+;;  （DriveFS ContextMenu Handler / drivefsext.dll）が出している。これを直接作り、
+;;   画面に出さないメニューへ項目を入れさせてから、項目名で探して InvokeCommand する。
+;;   キー送りや画像認識と違い、複数選択・ファイルとフォルダの違いでメニュー構成が
+;;   変わっても、端末（DPI・テーマ）が変わっても壊れない。
+;;   シェル全体の右クリックメニューを作ると約340msかかるが、Driveのハンドラだけなら約31ms。
+;;   項目には動詞名（GetCommandString）が無いので、表示文字列で探すしかない。
+;;;;
+
+; 選択中の項目に対して Googleドライブのメニュー項目を実行し、結果をツールチップに出す。
+; item.result: "state" = オフライン/オンラインの切り替え（チェック状態で反映を確かめる）
+;              "link"  = リンクのコピー（クリップボードに入ったリンクを出す）
+;              "open"  = ブラウザや共有ダイアログが開くもの（依頼したことだけ知らせる）
+GDriveRun(item) {
+    tab := GetActiveExplorerTab()
+    if (tab = "") {
+        MyTooltip("エクスプローラーのウィンドウで使ってください", 2000)
+        return
+    }
+    paths := []
+    for it in tab.Document.SelectedItems
+        paths.Push(it.Path)
+    if (paths.Length = 0) {
+        MyTooltip("ファイルかフォルダを選択してください", 2000)
+        return
+    }
+    target := GDriveTargetName(paths)
+
+    if (item.result = "link") {
+        saved := ClipboardAll()
+        A_Clipboard := ""           ; ClipWait でリンクが入ったことを見分けるため空にする
+    }
+    try status := InvokeDriveMenu(paths, item.cmd, WinExist("A"))
+    catch as err {
+        MyTooltip("Googleドライブの操作に失敗しました`n" err.Message, 3000)
+        return
+    }
+
+    switch status {
+        case "notdrive":
+            MyTooltip("Googleドライブ上のファイルではありません`n" target, 2500)
+        case "notfound":
+            ; 共有・開く・リンクは1つだけ選んだときにしか出ない
+            msg := (paths.Length > 1) ? "（複数選択では使えない項目です）" : "（Googleドライブの表示名が変わった可能性があります）"
+            MyTooltip("メニューに「" item.cmd "」がありません`n" msg, 3000)
+        case "already":
+            MyTooltip("すでに「" item.label "」になっています`n" target, 2000)
+        case "ok":
+            GDriveReportResult(item, paths, target)
+    }
+    if (item.result = "link" && status != "ok")
+        A_Clipboard := saved        ; 何も入らなかったので元に戻す
+}
+
+; 実行後の結果を確かめてツールチップに出す
+GDriveReportResult(item, paths, target) {
+    switch item.result {
+        case "state":
+            ; 反映されたかを右クリックメニューのチェック状態で確かめる
+            if (InvokeDriveMenu(paths, item.cmd, 0, false) = "already")
+                MyTooltip("「" item.label "」にしました`n" target, 2000)
+            else
+                MyTooltip("「" item.label "」を依頼しました（反映待ち）`n" target, 2500)
+        case "link":
+            if ClipWait(3)
+                MyTooltip("リンクをコピーしました`n" A_Clipboard, 2500)
+            else
+                MyTooltip("リンクを取得できませんでした`n" target, 2500)
+        default:
+            MyTooltip("「" item.label "」を開いています`n" target, 2000)
+    }
+}
+
+; ツールチップに出す対象名（1件なら名前、複数なら「名前 ほかN件」）
+GDriveTargetName(paths) {
+    SplitPath(paths[1], &name)
+    return (paths.Length > 1) ? name " ほか" (paths.Length - 1) "件" : name
+}
+
+; Googleドライブの右クリックメニューを画面に出さずに作り、cmdText の項目を実行する。
+; invoke := false なら探すだけ（状態の確認用）。
+; 戻り値: "ok" / "already"（チェック済み＝すでにその状態）/ "notfound" / "notdrive"
+; paths はすべて同じフォルダにあること（エクスプローラーの選択は必ずそうなる。
+; 検索結果のように親が混ざると、2件目以降の相対IDが1件目の親と食い違う）。
+InvokeDriveMenu(paths, cmdText, hwnd := 0, invoke := true) {
+    static CLSID_DriveFSMenu := "{EE15C2BD-CECB-49F8-A113-CA1BFC528F5B}"
+    static IID_IShellExtInit := "{000214E8-0000-0000-C000-000000000046}"
+    static IID_IContextMenu  := "{000214E4-0000-0000-C000-000000000046}"
+    static IID_IShellFolder  := "{000214E6-0000-0000-C000-000000000046}"
+    static IID_IDataObject   := "{0000010E-0000-0000-C000-000000000046}"
+    static ID_FIRST := 1
+
+    SplitPath(paths[1], , &dir1)
+    for p in paths {
+        SplitPath(p, , &dir)
+        if (dir != dir1)
+            throw Error("別々のフォルダにある項目はまとめて扱えません")
+    }
+
+    pidls := [], hMenu := 0, parent := 0
+    try {
+        children := Buffer(A_PtrSize * paths.Length)
+        for i, p in paths {
+            DllCall("shell32\SHParseDisplayName", "wstr", p, "ptr", 0, "ptr*", &pidl := 0, "uint", 0, "ptr", 0, "hresult")
+            pidls.Push(pidl)
+            ; 末尾のIDは親フォルダからの相対IDとしてそのまま使える
+            NumPut("ptr", DllCall("shell32\ILFindLastID", "ptr", pidl, "ptr"), children, (i - 1) * A_PtrSize)
+        }
+        parent := DllCall("shell32\ILClone", "ptr", pidls[1], "ptr")
+        DllCall("shell32\ILRemoveLastID", "ptr", parent)
+
+        DllCall("shell32\SHBindToParent", "ptr", pidls[1], "ptr", GuidBuffer(IID_IShellFolder), "ptr*", &pSF := 0, "ptr", 0, "hresult")
+        sf := ComValue(13, pSF)     ; 13 = VT_UNKNOWN。抜けるときに自動で Release される
+        ComCall(10, sf, "ptr", hwnd, "uint", paths.Length, "ptr", children
+            , "ptr", GuidBuffer(IID_IDataObject), "ptr", 0, "ptr*", &pDO := 0)  ; GetUIObjectOf
+        dataObj := ComValue(13, pDO)
+
+        ext := ComObject(CLSID_DriveFSMenu, IID_IShellExtInit)
+        ComCall(3, ext, "ptr", parent, "ptr", dataObj, "ptr", 0)               ; Initialize
+        cm := ComObjQuery(ext, IID_IContextMenu)
+        hMenu := DllCall("CreatePopupMenu", "ptr")
+        ComCall(3, cm, "ptr", hMenu, "uint", 0, "uint", ID_FIRST, "uint", 0x7FFF, "uint", 0)  ; QueryContextMenu
+
+        ; Googleドライブ外のファイルには区切り線（文字の無い項目）しか足されない（実測）
+        if !MenuHasTextItem(hMenu)
+            return "notdrive"
+        found := FindMenuItemByText(hMenu, cmdText)
+        if !found
+            return "notfound"
+        if found.checked
+            return "already"
+        if !invoke
+            return "ok"
+
+        ; CMINVOKECOMMANDINFO（lpVerb にコマンドIDのオフセットを渡す）
+        ci := Buffer(16 + 5 * A_PtrSize, 0)
+        NumPut("uint", ci.Size, ci, 0)
+        NumPut("ptr", hwnd, ci, 8)
+        NumPut("ptr", found.id - ID_FIRST, ci, 8 + A_PtrSize)
+        NumPut("int", 1, ci, 8 + 4 * A_PtrSize)                                 ; SW_SHOWNORMAL
+        ComCall(4, cm, "ptr", ci)                                                ; InvokeCommand
+        return "ok"
+    } finally {
+        if hMenu
+            DllCall("DestroyMenu", "ptr", hMenu)
+        if parent
+            DllCall("ole32\CoTaskMemFree", "ptr", parent)
+        for pidl in pidls
+            DllCall("ole32\CoTaskMemFree", "ptr", pidl)
+    }
+}
+
+; メニュー（サブメニューも含む）から表示文字列が text の項目を探す。
+; 戻り値: {id, checked} / 見つからなければ ""
+FindMenuItemByText(hMenu, text) {
+    Loop DllCall("GetMenuItemCount", "ptr", hMenu, "int") {
+        pos := A_Index - 1
+        if (sub := DllCall("GetSubMenu", "ptr", hMenu, "int", pos, "ptr")) {
+            if (found := FindMenuItemByText(sub, text))
+                return found
+            continue
+        }
+        buf := Buffer(512, 0)
+        DllCall("GetMenuStringW", "ptr", hMenu, "uint", pos, "ptr", buf, "int", 256, "uint", 0x400)  ; MF_BYPOSITION
+        if (StrGet(buf) = text) {
+            state := DllCall("GetMenuState", "ptr", hMenu, "uint", pos, "uint", 0x400)
+            return { id: DllCall("GetMenuItemID", "ptr", hMenu, "int", pos, "int"), checked: !!(state & 0x8) }  ; MF_CHECKED
+        }
+    }
+    return ""
+}
+
+; 文字のある項目が1つでもあるか（区切り線だけなら false）
+MenuHasTextItem(hMenu) {
+    Loop DllCall("GetMenuItemCount", "ptr", hMenu, "int")
+        if DllCall("GetMenuStringW", "ptr", hMenu, "uint", A_Index - 1, "ptr", 0, "int", 0, "uint", 0x400) > 0
+            return true
+    return false
+}
+
+GuidBuffer(str) {
+    buf := Buffer(16)
+    DllCall("ole32\CLSIDFromString", "wstr", str, "ptr", buf, "hresult")
+    return buf
 }
 
 OpenBgMenu( keysToSend := "" ) {
