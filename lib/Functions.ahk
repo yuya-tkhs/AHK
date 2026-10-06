@@ -14,13 +14,15 @@ MyTooltip(text := "", duration := 300, wrapWidth := 80) {
         ToolTipEx(StretchSeparators(WrapText(text, wrapWidth)), duration / 1000)
 }
 
-; 「- - - -」だけの行（メニューの区切り線）を、ハイフンだけの線に置き換え、
-; 他の行のうち最も長いものの幅まで伸ばす。元の文字列は「- - -」のままにしておく
+; 「- - - -」だけの行（メニューの区切り線）を、罫線（─）だけの線に置き換え、
+; 他の行のうち最も長いものの幅まで伸ばす。半角ハイフンは字間が空いて点線に見えるため、
+; 字の幅いっぱいに描かれて隣とつながる罫線素片（U+2500）を使う。元の文字列は「- - -」のままにしておく
 ; （ショートカット一覧の MenuTextRows() が先頭の「-」で区切り線を見分けるため）。
 ; ツールチップのフォントはプロポーショナルなので文字数では合わず、実際に描く幅（ピクセル）で比べる。
 ; 折り返し（WrapText）の後にかける。区切り線は全角換算で文字数が多くなるため、先に伸ばすと
 ; 区切り線そのものが折り返されてしまう。
 StretchSeparators(text) {
+    static LINE_CHAR := "─"
     if !RegExMatch(text, "m)^-( -)*$")
         return text
     lines := StrSplit(text, "`n", "`r")
@@ -30,12 +32,12 @@ StretchSeparators(text) {
             maxW := Max(maxW, TooltipTextWidth(line))
     if (maxW = 0)
         return text
-    ; ハイフンだけを並べる（「------」）。
+    ; 罫線だけを並べる（「──────」）。
     ; 最長の行を超えない最大の本数にする。見積もりの後、実測で超えていれば1本ずつ削る
-    n := Max(1, Floor(maxW / TooltipTextWidth("-")))
-    sep := StrRepeat("-", n)
+    n := Max(1, Floor(maxW / TooltipTextWidth(LINE_CHAR)))
+    sep := StrRepeat(LINE_CHAR, n)
     while (n > 1 && TooltipTextWidth(sep) > maxW)
-        sep := StrRepeat("-", --n)
+        sep := StrRepeat(LINE_CHAR, --n)
     out := ""
     for i, line in lines
         out .= (i > 1 ? "`n" : "") (RegExMatch(line, "^-( -)*$") ? sep : line)
