@@ -1,6 +1,7 @@
 ; メニューの文言は関数にまとめる。ショートカット一覧（ShortcutList.ahk）が
 ; この文字列をそのまま読んで並べるので、ここを直せば一覧も追随する。
-GlobalMenuText() {
+; knobApp を省略するとノブ欄は今アクティブなウィンドウの割り当てになる（KnobMenuText 参照）
+GlobalMenuText(knobApp := "") {
     return "
     (
     2ストローク待機中（10秒）
@@ -16,7 +17,7 @@ GlobalMenuText() {
     a: オーディオ切り替え
     k: ショートカット一覧
     r: Reload
-    )" . KnobMenuText()
+    )" . KnobMenuText(knobApp)
 }
 
 ; Gyazoの範囲キャプチャを開始する。常駐中でも起動し直すとその都度キャプチャが始まる。

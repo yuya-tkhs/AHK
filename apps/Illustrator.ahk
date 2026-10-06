@@ -238,7 +238,7 @@ BuildAiMenuText(title) {
 ; 第1階層の末尾に出す案内。Space は EndKey に入っているだけで未割当だったので
 ; ランチャーの入口に使っている（既存キーと衝突しない）。
 AiMenuFooter() {
-    return "`n- - - - - - - - - - - - - - - -`nSpace: ランチャー（一覧から選ぶ）" KnobMenuText("adobe")
+    return "`n- - - - - - - - - - - - - - - -`nSpace: ランチャー（一覧から選ぶ）" KnobMenuText()
 }
 
 ; 第1階層で押されたキーに対応する direct の項目を返す（無ければ ""）

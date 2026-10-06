@@ -40,7 +40,7 @@ ExplorerMenuText() {
     - - - - - - - - - - - - - - - -
     1: 動画フォルダの作成
     2: Original, Proxy
-    )" . BuildGroupMenuLines(ExplorerMenu) . KnobMenuText("explorer")
+    )" . BuildGroupMenuLines(ExplorerMenu) . KnobMenuText()
 }
 
 ; 2/3ストローク

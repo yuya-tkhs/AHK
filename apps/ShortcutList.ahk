@@ -34,7 +34,7 @@ ShowShortcutList() {
     g.MarginX := 0, g.MarginY := 0
 
     left := [{ title: "共通", rows: CommonShortcutRows() }
-           , { title: "グローバル2ストローク（無変換 + Space）", rows: MenuTextRows(GlobalMenuText()) }]
+           , { title: "グローバル2ストローク（無変換 + Space）", rows: MenuTextRows(GlobalMenuText("all")) }]
     right := AppShortcutSections(app)
 
     bottom := DrawShortcutColumn(g, left, PAD, KEY_W, DESC_W)

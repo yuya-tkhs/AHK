@@ -78,32 +78,56 @@ AppKey( key ) {
 }
 
 ; 2ストロークのメニューに添えるノブ（F19〜F22）の割り当て。
-; app を省略すると基本の割り当て（グローバル2ストローク用）を返す。
-; "adobe" / "explorer" はそのアプリでの割り当て。AppKey() の分岐を直したらここも直す。
+; app を省略すると、今アクティブなウィンドウでの割り当て（KnobApp() の判定）だけを返す。
+; "all" は全アプリ分の一覧（ショートカット一覧用）。AppKey() の分岐を直したらここも直す。
 ; 「キー: 説明」の形にしてあるので、ショートカット一覧（MenuTextRows）もそのまま読める。
 ; 左ノブ＝F21 / F22、右ノブ＝F19 / F20。どちらも小さい番号が左回し（↺）、大きい番号が右回し（↻）。
-; 見出し行は置かない（「左ノブ / 右ノブ」と重複するため）。各行だけで意味が通るよう ↺ / ↻ を付けている。
+; 見出し行は置かない（「左 / 右」と重複するため）。各行だけで意味が通るよう ↺ / ↻ を付けている。
+; 「入力中」は日本語入力（IME）がONのとき。キーを押した瞬間に判定するので、
+; メニューを出した時点の状態では決めずに添え書きとして出す。
 KnobMenuText( app := "" ) {
+    static ZOOM := "`n右: ↺ 表示縮小 / ↻ 表示拡大"
+    static UNDO := "↺ 元に戻す / ↻ やり直し"
+    if ( app = "" )
+        app := KnobApp()
     text := "`n- - - - - - - - - - - - - - - -"
     switch app {
         case "adobe":
-            text .= "`n左ノブ: ↺ Shift+Tab / ↻ Tab"
-                . "`n右ノブ: ↺ ↓ / ↻ ↑"
-        case "explorer":
-            text .= "`n左ノブ: ↺ 前のタブ / ↻ 次のタブ"
-                . "`n　└ 日本語入力中: ↺ 元に戻す / ↻ やり直し"
-                . "`n右ノブ: ↺ 表示縮小 / ↻ 表示拡大"
-        default:
-            text .= "`n左ノブ: ↺ Shift+Tab / ↻ Tab"
-                . "`n　└ 日本語入力中・メモ帳: ↺ 元に戻す / ↻ やり直し"
+            text .= "`n左: ↺ Shift+Tab / ↻ Tab"
+                . "`n右: ↺ ↓ / ↻ ↑"
+        case "desktop":
+            text .= "`n左: 無効" ZOOM
+        case "notepad":
+            text .= "`n左: " UNDO ZOOM
+        case "tab":
+            text .= "`n左: ↺ 前のタブ / ↻ 次のタブ"
+                . "`n　└ 入力中: " UNDO ZOOM
+        case "all":
+            text .= "`n左: ↺ Shift+Tab / ↻ Tab"
+                . "`n　└ 入力中・メモ帳: " UNDO
                 . "`n　└ Chrome・エクスプローラー・VSCode: ↺ 前のタブ / ↻ 次のタブ"
-                . "`n　└ デスクトップ: 無効"
-                . "`n右ノブ: ↺ 表示縮小 / ↻ 表示拡大"
+                . "`n　└ デスクトップ: 無効" ZOOM
                 . "`n　└ Adobe系: ↺ ↓ / ↻ ↑"
+        default:
+            text .= "`n左: ↺ Shift+Tab / ↻ Tab"
+                . "`n　└ 入力中: " UNDO ZOOM
     }
     return text
 }
 
+; 今アクティブなウィンドウがノブのどの割り当てになるか。
+; AppKey() と同じ順で判定する（入力中かどうかはキーを押した瞬間に決まるので含めない）。
+KnobApp() {
+    if IsAdobeApp()
+        return "adobe"
+    if IsDesktop()
+        return "desktop"
+    if IsTextEditApp()
+        return "notepad"
+    if IsTabSwitchApp()
+        return "tab"
+    return "default"
+}
 ; 元に戻す／やり直しを送る。メモ帳だけ ^+z が効かないため ^y にする。
 SendUndoRedo( key ) {
     if WinActive( exe_notepad )
