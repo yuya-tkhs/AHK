@@ -128,17 +128,31 @@ FocusMotionField(target, label) {
     if !h
         return
     ; 待ちを1ms単位で見るため、探している間だけ Windows のタイマー分解能を1msにする
-    ; （既定は約15.6msで、Sleep(5) でも約15ms眠る。落ち着き判定がその分長くなっていた）
+    ; （既定は約15.6msで、Sleep(5) でも約15ms眠る）
     DllCall("winmm\timeBeginPeriod", "uint", 1)
+    hook := PrHookFocus(WinGetPID(h))
     try {
         PrFindMotionField(h, target, label)
     } finally {
+        DllCall("UnhookWinEvent", "ptr", hook)
         DllCall("winmm\timeEndPeriod", "uint", 1)
     }
 }
 
+; Tab を一定間隔で送り、入力欄に移ったことは Windows のフォーカス通知（PrOnFocus）で受け取る。
+; 以前は Tab 1回ごとに「フォーカスが落ち着くまで」待っていたが、1回あたり約50msかかり
+; 不透明度まで約1.45秒だった。通知なら待たずに次を送れる（Premiere 自身の処理が1回約31ms）。
+; 通知は順番どおりに届き、届いた時点で入力欄の位置は確定している（実測）。
+; Tab をまとめて一度に送ると Premiere が取りこぼすので（実測：26回送って位置 X に着地）、
+; 処理に追いつく間隔（PACE）で1回ずつ送る。
+; 目的の欄と分かった時点では先に送った Tab がまだ処理待ちのことがあるので、
+; 処理し終わるのを待ってから、行き過ぎていれば Shift+Tab で戻る。
+; 上の方の欄（位置 X・Y、スケール）は Tab 数回で着くので、1回ずつ落ち着くのを確かめて進む
+; （careful）。通知方式だと行き過ぎて戻る分だけかえって遅くなった（実測 約0.4秒 → 約0.5〜0.64秒）。
 PrFindMotionField(h, target, label) {
-    static MAX_TABS := 45, MAX_BACK := 12
+    global _prEdits
+    static PACE := 30, MAX_TABS := 45, MAX_BACK := 12
+    careful := (target = "posX" || target = "posY" || target = "scale")
     ; エフェクトコントロールへはメニュー（ウィンドウ → …）を項目名で実行して移る。
     ; ショートカット（以前は Shift+1 → Shift+5）だと Premiere 側で割り当てを変えたときに動かなくなるため。
     ; 先にプロジェクトへ移るのは、エフェクトコントロールに居たままだと先頭に戻らず、
@@ -147,23 +161,37 @@ PrFindMotionField(h, target, label) {
     PrSettleFocus(h)
     MenuSelect(exe_pr, , "ウィンドウ", "エフェクトコントロール")
     PrSettleFocus(h)
+    _prEdits := []
     rows := []                      ; 見えている入力欄を行ごとに { y, xs: [x, …] }
-    goal := "", cur := ""
+    goal := "", failed := false, used := 0
     Loop MAX_TABS {
-        if !(cur := PrVisibleEdit(PrSendAndSettle(h, "{Tab}")))
-            continue
-        if (rows.Length && rows[rows.Length].y = cur.y)
-            rows[rows.Length].xs.Push(cur.x)
-        else if (rows.Length && cur.y < rows[rows.Length].y)
-            break                   ; 上の行に戻った＝一周した。行を数え違えている（途中の欄を見落とした）ので中止
-        else
-            rows.Push({ y: cur.y, xs: [cur.x] })
-        if (rows.Length >= 2 && rows[1].xs.Length < 2)
-            break                   ; 最初の行が2つ並びでない＝モーションの位置ではない
-        if (goal := PrMotionGoal(rows, target))
+        if careful {
+            PrSendAndSettle(h, "{Tab}")
+            Sleep(-1)               ; 溜まっている通知を受け取る（DllCall の Sleep では届かない）
+        } else {
+            Send("{Tab}")
+            Sleep(PACE)             ; AHK の Sleep はメッセージを処理するので、この間に通知が届く
+        }
+        while (!goal && !failed && used < _prEdits.Length) {
+            cur := _prEdits[++used]
+            if (rows.Length && rows[rows.Length].y = cur.y)
+                rows[rows.Length].xs.Push(cur.x)
+            else if (rows.Length && cur.y < rows[rows.Length].y)
+                failed := true      ; 上の行に戻った＝一周した。行を数え違えているので中止
+            else
+                rows.Push({ y: cur.y, xs: [cur.x] })
+            if (rows.Length >= 2 && rows[1].xs.Length < 2)
+                failed := true      ; 最初の行が2つ並びでない＝モーションの位置ではない
+            if !failed
+                goal := PrMotionGoal(rows, target)
+        }
+        if (goal || failed)
             break
     }
     if goal {
+        if !careful
+            PrDrainFocus(h)         ; 送った Tab を Premiere が処理し終わるまで待つ
+        cur := PrVisibleEdit(PrSettleFocus(h))
         Loop MAX_BACK + 1 {
             if (cur && cur.x = goal.x && cur.y = goal.y)
                 return
@@ -176,6 +204,43 @@ PrFindMotionField(h, target, label) {
     MyTooltip("「" label "」の欄が見つかりません`nクリップを選択し、エフェクトコントロールで「モーション」を開いてください", 3000)
 }
 
+; FocusMotionField の間だけ、Premiere のフォーカス変化の通知（EVENT_OBJECT_FOCUS）を受け取る
+global _prEdits := []               ; 通知で受けた「見えている入力欄」{x, y} を届いた順に
+PrHookFocus(pid) {
+    static cb := CallbackCreate(PrOnFocus, "F", 7)
+    static EVENT_OBJECT_FOCUS := 0x8005, WINEVENT_OUTOFCONTEXT := 0
+    return DllCall("SetWinEventHook", "uint", EVENT_OBJECT_FOCUS, "uint", EVENT_OBJECT_FOCUS
+        , "ptr", 0, "ptr", cb, "uint", pid, "uint", 0, "uint", WINEVENT_OUTOFCONTEXT, "ptr")
+}
+
+; 1回の Tab で通知は複数届く（途中の窓・同じ入力欄の重複）。見えている入力欄だけを拾い、
+; 直前と同じ位置のものは重複として捨てる。
+PrOnFocus(hHook, event, hwnd, *) {
+    global _prEdits
+    if !(e := PrVisibleEdit(hwnd))
+        return
+    if (_prEdits.Length) {
+        last := _prEdits[_prEdits.Length]
+        if (last.x = e.x && last.y = e.y)
+            return
+    }
+    _prEdits.Push(e)
+}
+
+; Premiere が送られた Tab を処理し終わるまで待つ（フォーカスの通知が DRAIN ms 途切れるまで。最大1.5秒）
+PrDrainFocus(h) {
+    static DRAIN := 60, LIMIT := 1500
+    t0 := A_TickCount, last := -1, since := A_TickCount
+    loop {
+        fc := 0
+        try fc := ControlGetFocus(h)
+        if (fc != last)
+            last := fc, since := A_TickCount
+        if (A_TickCount - since >= DRAIN || A_TickCount - t0 > LIMIT)
+            return
+        Sleep(1)
+    }
+}
 ; 作業中のプロジェクトのパネルへ移る（Shift+1 と同じ）。
 ; メニューの「ウィンドウ → プロジェクト」はサブメニューで、開いているプロジェクトの
 ; ファイル名（「名称未設定.prproj」）が並ぶ。作業中のものはウィンドウタイトル
