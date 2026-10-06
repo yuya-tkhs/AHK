@@ -121,6 +121,19 @@ MenuTextRows(text) {
     return rows
 }
 
+; メニュー文字列から拾った行のうち、グループの行（「g: … ▸」）の下に第3打鍵をぶら下げる。
+; ツールチップの第1階層はグループ名しか出さないので、一覧ではここで中身を足す。
+GroupShortcutRows(rows, groups) {
+    out := []
+    for row in rows {
+        out.Push(row)
+        if (group := FindMenuGroup(groups, row[1]))
+            for item in group.items
+                out.Push(["　└ " MenuItemDisp(item), "　" item.label])
+    }
+    return out
+}
+
 ; Illustratorの3ストロークは AiMenu から組み立てる。
 ; グループ見出しの下に第3打鍵をぶら下げる。
 AiShortcutRows() {
@@ -171,13 +184,13 @@ ActiveShortcutApp() {
 AppShortcutSections(app) {
     switch app {
         case "premiere":
-            return [{ title: "Premiere 2ストローク（Ctrl + Space）", rows: MenuTextRows(PremiereMenuText()) }
+            return [{ title: "Premiere 2ストローク（Ctrl + Space）", rows: GroupShortcutRows(MenuTextRows(PremiereMenuText()), PremiereMenu) }
                   , { title: "Premiere 単独", rows: PremiereShortcutRows() }]
         case "illustrator":
             return [{ title: "Illustrator 2/3ストローク（Ctrl + Space 短押し）", rows: AiShortcutRows() }
                   , { title: "Illustrator 単独", rows: AiSoloShortcutRows() }]
         case "explorer":
-            return [{ title: "エクスプローラー 2/3ストローク（Ctrl + Space）", rows: MenuTextRows(ExplorerMenuText()) }
+            return [{ title: "エクスプローラー 2/3ストローク（Ctrl + Space）", rows: GroupShortcutRows(MenuTextRows(ExplorerMenuText()), ExplorerMenu) }
                   , { title: "エクスプローラー 単独", rows: [["BS", "削除（一覧にフォーカス時）"]] }]
     }
     return []

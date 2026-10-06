@@ -189,19 +189,25 @@ MenuItemIsDirect(item) {
     return item.HasOwnProp("direct") && item.direct
 }
 
-; 第1階層のツールチップに足すグループ欄。全項目を、実際に打つキー列そのままで並べる。
-; direct の項目は第2打鍵だけで動くので短い方を出し、それ以外は
-; 「グループキー + 項目キー」の3ストロークを出す。
-; 降りてから選ぶ前に何が入っているか分かるよう、第3打鍵まで見せる。
+; 第1階層のツールチップに足すグループ欄。
+; グループは「g: モーションの欄へ移動 ▸」の1行だけ出し、第3打鍵は出さない
+; （中身はグループキーを押した後のサブメニューで見る。2026-10-06 にユーザーの希望で、
+; 第3打鍵まで並べる形からこの形にした）。
+; direct の項目は第2打鍵だけで動くので、第1階層にもそのまま並べる。
+; ショートカット一覧は MenuTextRows で拾ったあと GroupShortcutRows で第3打鍵を足す。
 BuildGroupMenuLines(groups) {
-    text := ""
-    for group in groups {
-        text .= "`n- - - - - - - - - - - - - - - -`n" group.label " [" group.key "]"
-        for item in group.items {
-            seq := MenuItemIsDirect(item) ? MenuItemDisp(item) : group.key " " MenuItemDisp(item)
-            text .= "`n" seq ": " item.label
-        }
-    }
+    if (groups.Length = 0)
+        return ""
+    text := "`n- - - - - - - - - - - - - - - -"
+    for group in groups
+        text .= "`n" group.key ": " group.label " ▸"
+    direct := ""
+    for group in groups
+        for item in group.items
+            if MenuItemIsDirect(item)
+                direct .= "`n" MenuItemDisp(item) ": " item.label
+    if (direct != "")
+        text .= "`n- - - - - - - - - - - - - - - -" direct
     return text
 }
 

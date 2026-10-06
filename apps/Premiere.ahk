@@ -32,11 +32,16 @@ OnCtrlEnterPremiere() {
 ; 3ストロークのグループ（Illustrator の AiMenu / Explorer の ExplorerMenu と同じ形）。
 ; 第1階層の文言・サブメニュー・ショートカット一覧はすべてここから作る。
 ; field はエフェクトコントロールの「モーション」のどの欄か（FocusMotionField を参照）。
+; g はBlenderの移動ツール（G）に合わせた。
 global PremiereMenu := [
-    { key: "p", label: "モーションの欄にフォーカス", items: [
-        { key: "x", label: "位置 X",   field: "posX" },
-        { key: "y", label: "位置 Y",   field: "posY" },
-        { key: "s", label: "スケール", field: "scale" } ] }
+    { key: "g", label: "モーションの欄へ移動", items: [
+        { key: "x", label: "位置 X",             field: "posX" },
+        { key: "y", label: "位置 Y",             field: "posY" },
+        { key: "s", label: "スケール",           field: "scale" },
+        { key: "r", label: "回転",               field: "rotation" },
+        { key: "a", label: "アンカーポイント X", field: "anchorX" },
+        { key: "c", label: "切り抜き（左）",     field: "cropLeft" },
+        { key: "t", label: "不透明度",           field: "opacity" } ] }
 ]
 
 ; メニューの文言は関数にまとめる（ShortcutList.ahk がこの文字列を読んで一覧に並べる）
@@ -104,74 +109,119 @@ PremiereMenuText() {
 ;;   Premiere のパネルは独自描画で、UI Automation にも中身を出さない（スクリーンリーダーの
 ;;   合図をONにしても枠だけ。実測）。ただし数値欄は、入力状態になった瞬間だけ Win32 の
 ;;   Edit が現れ、値と画面上の位置が読める。そこで Tab で欄を順にたどり、
-;;   「見えている入力欄」を行ごとにまとめて目的の欄を見分ける。
-;;   以前の Tab ×4 の決め打ちと違い、見えない欄（大きさ0の Edit）や入力欄以外の停止位置が
-;;   増減してもずれない。並びは 位置 X・Y（同じ行に2つ）→ スケール（次の行）→ 回転 → …
+;;   「見えている入力欄」を行（y座標）ごとにまとめて目的の欄を見分ける。
+;;   Tab の回数を決め打ちしないので、見えない欄（大きさ0の Edit）や入力欄以外の
+;;   停止位置が増減してもずれない。
+;;
+;;   並び（実測）：位置 X・Y → スケール → 回転 → アンカーポイント X・Y → アンチフリッカー
+;;                 → 切り抜き 左・上・右・下 → 不透明度
+;;   目印は「欄が2つ並ぶ行」。1つ目が位置、2つ目がアンカーポイント。
+;;   回転はアンカーの直前の行（縦横比を固定していないとスケールが2行になるが、それでも当たる）、
+;;   切り抜き（左）はアンカーの2行後、不透明度は6行後。
+;;   目的の欄は、それと分かった時点で行き過ぎていることがある（位置 X・アンカー X・回転）ので、
+;;   その欄に戻るまで Shift+Tab で戻る。
 ;;;;
 
-; target: "posX" / "posY" / "scale"
+; target: posX / posY / scale / rotation / anchorX / cropLeft / opacity
 FocusMotionField(target, label) {
-    static MAX_TABS := 40
     h := WinExist(exe_pr)
     if !h
         return
+    ; 待ちを1ms単位で見るため、探している間だけ Windows のタイマー分解能を1msにする
+    ; （既定は約15.6msで、Sleep(5) でも約15ms眠る。落ち着き判定がその分長くなっていた）
+    DllCall("winmm\timeBeginPeriod", "uint", 1)
+    try {
+        PrFindMotionField(h, target, label)
+    } finally {
+        DllCall("winmm\timeEndPeriod", "uint", 1)
+    }
+}
+
+PrFindMotionField(h, target, label) {
+    static MAX_TABS := 45, MAX_BACK := 12
     Send("+1+5")                    ; 以前の p と同じく、プロジェクト → エフェクトコントロールの順に移る
     PrSettleFocus(h)
-    first := "", paired := false
+    rows := []                      ; 見えている入力欄を行ごとに { y, xs: [x, …] }
+    goal := "", cur := ""
     Loop MAX_TABS {
-        e := PrVisibleEdit(PrSendAndSettle(h, "{Tab}"))
-        if !e
+        if !(cur := PrVisibleEdit(PrSendAndSettle(h, "{Tab}")))
             continue
-        if !first {                 ; 最初に見えた入力欄＝位置 X のはず
-            first := e
-            continue
-        }
-        if !paired {                ; 2つ目が同じ行なら 位置 X・Y の組
-            if (e.y != first.y)
-                break
-            paired := true
-            if (target = "posY")
+        if (rows.Length && rows[rows.Length].y = cur.y)
+            rows[rows.Length].xs.Push(cur.x)
+        else
+            rows.Push({ y: cur.y, xs: [cur.x] })
+        if (rows.Length >= 2 && rows[1].xs.Length < 2)
+            break                   ; 最初の行が2つ並びでない＝モーションの位置ではない
+        if (goal := PrMotionGoal(rows, target))
+            break
+    }
+    if goal {
+        Loop MAX_BACK + 1 {
+            if (cur && cur.x = goal.x && cur.y = goal.y)
                 return
-            if (target = "posX") {  ; 1つ戻る
-                back := PrVisibleEdit(PrSendAndSettle(h, "+{Tab}"))
-                if (back && back.x = first.x && back.y = first.y)
-                    return
+            if (A_Index > MAX_BACK)
                 break
-            }
-            continue
+            cur := PrVisibleEdit(PrSendAndSettle(h, "+{Tab}"))
         }
-        if (target = "scale" && e.y > first.y)  ; 位置の次の行＝スケール
-            return
     }
     Send("{Escape}")
     MyTooltip("「" label "」の欄が見つかりません`nクリップを選択し、エフェクトコントロールで「モーション」を開いてください", 3000)
 }
 
+; ここまでに見えた行から目的の欄の位置 {x, y} が決まれば返す（まだ決まらなければ ""）
+PrMotionGoal(rows, target) {
+    pairs := []                     ; 欄が2つ並ぶ行の番号
+    for i, row in rows
+        if (row.xs.Length >= 2)
+            pairs.Push(i)
+    if (pairs.Length = 0 || pairs[1] != 1)
+        return ""
+    switch target {
+        case "posX":  return { x: rows[1].xs[1], y: rows[1].y }
+        case "posY":  return { x: rows[1].xs[2], y: rows[1].y }
+        case "scale": return (rows.Length >= 2) ? { x: rows[2].xs[1], y: rows[2].y } : ""
+    }
+    if (pairs.Length < 2)
+        return ""
+    k := pairs[2]                   ; アンカーポイントの行
+    switch target {
+        case "anchorX":  return { x: rows[k].xs[1], y: rows[k].y }
+        case "rotation": return (k - 1 > 1) ? { x: rows[k - 1].xs[1], y: rows[k - 1].y } : ""
+        case "cropLeft": return (rows.Length >= k + 2) ? { x: rows[k + 2].xs[1], y: rows[k + 2].y } : ""
+        case "opacity":  return (rows.Length >= k + 6) ? { x: rows[k + 6].xs[1], y: rows[k + 6].y } : ""
+    }
+    return ""
+}
 ; キーを送り、フォーカスが動いてから落ち着くまで待って、着地した窓を返す。
 ; Premiere が反応する前に「動かない＝着地」と判定しないよう、まず前の窓から
-; フォーカスが離れるのを待つ（最大200ms）。入力欄以外の停止位置が続くと同じ窓のまま
-; 動かないことがあるので、そのときは上限まで待ってから落ち着き待ちに進む。
+; フォーカスが離れるのを待つ。入力欄（Edit）は欄ごとに作り直されるので、入力欄からの
+; 移動なら必ず窓が変わる（上限200ms）。入力欄以外の停止位置はパネル本体の窓のままで、
+; 続くと動かないので待ちを短くする。入力欄以外から入力欄へ移るときの反応は最大32ms
+; （実測）なので上限45ms。一律200msだと、入力欄以外が続く区間で毎回上限まで待ち、
+; 不透明度まで約2秒かかっていた（実測）。
 PrSendAndSettle(h, keys) {
-    static MOVE_LIMIT := 200
+    static FROM_EDIT := 200, FROM_OTHER := 45
     prev := 0
     try prev := ControlGetFocus(h)
+    limit := FROM_OTHER
+    try limit := (WinGetClass(prev) = "Edit") ? FROM_EDIT : FROM_OTHER
     Send(keys)
     t0 := A_TickCount
-    while (A_TickCount - t0 < MOVE_LIMIT) {
+    while (A_TickCount - t0 < limit) {
         fc := 0
         try fc := ControlGetFocus(h)
         if (fc != prev)
             break
-        Sleep(5)
+        DllCall("Sleep", "uint", 1)
     }
     return PrSettleFocus(h)
 }
 
-; フォーカスが30ms動かなくなるまで待って、その窓を返す（最大400ms）。
+; フォーカスが20ms動かなくなるまで待って、その窓を返す（最大400ms）。
 ; Tab の直後はフォーカスが途中の窓を一瞬経由するため、最初の変化では判定できない（実測）。
-; 30msで着地の取り違えは無く、1回あたり約60ms（実測）。
+; 20ms・30msとも21回中21回取り違え無し（実測）。
 PrSettleFocus(h) {
-    static STABLE := 30, LIMIT := 400
+    static STABLE := 20, LIMIT := 400
     t0 := A_TickCount, last := -1, since := A_TickCount
     loop {
         fc := 0
@@ -180,7 +230,7 @@ PrSettleFocus(h) {
             last := fc, since := A_TickCount
         if (A_TickCount - since >= STABLE || A_TickCount - t0 > LIMIT)
             return last
-        Sleep(5)
+        DllCall("Sleep", "uint", 1)
     }
 }
 
