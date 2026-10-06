@@ -1,6 +1,6 @@
 ; メニューの文言は関数にまとめる。ショートカット一覧（ShortcutList.ahk）が
 ; この文字列をそのまま読んで並べるので、ここを直せば一覧も追随する。
-; knobApp を省略するとノブ欄は今アクティブなウィンドウの割り当てになる（KnobMenuText 参照）
+; knobApp を省略するとノブ欄は今アクティブなウィンドウの割り当てになり、先頭にアプリ名を出す（KnobMenuText 参照）
 GlobalMenuText(knobApp := "") {
     return "
     (
@@ -17,7 +17,7 @@ GlobalMenuText(knobApp := "") {
     a: オーディオ切り替え
     k: ショートカット一覧
     r: Reload
-    )" . KnobMenuText(knobApp)
+    )" . KnobMenuText(knobApp, knobApp = "")   ; 自動判定のときは何のノブかを見出しで示す
 }
 
 ; Gyazoの範囲キャプチャを開始する。常駐中でも起動し直すとその都度キャプチャが始まる。

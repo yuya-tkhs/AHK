@@ -82,15 +82,19 @@ AppKey( key ) {
 ; "all" は全アプリ分の一覧（ショートカット一覧用）。AppKey() の分岐を直したらここも直す。
 ; 「キー: 説明」の形にしてあるので、ショートカット一覧（MenuTextRows）もそのまま読める。
 ; 左ノブ＝F21 / F22、右ノブ＝F19 / F20。どちらも小さい番号が左回し（↺）、大きい番号が右回し（↻）。
-; 見出し行は置かない（「左 / 右」と重複するため）。各行だけで意味が通るよう ↺ / ↻ を付けている。
+; 各行だけで意味が通るよう ↺ / ↻ を付けている。
 ; 「入力中」は日本語入力（IME）がONのとき。キーを押した瞬間に判定するので、
 ; メニューを出した時点の状態では決めずに添え書きとして出す。
-KnobMenuText( app := "" ) {
+; showName を true にすると先頭にアプリ名（「Chrome」など）の見出しを付ける。
+; どのアプリのメニューか分からないグローバル2ストロークで、何の割り当てを出しているかを示すため。
+KnobMenuText( app := "", showName := false ) {
     static ZOOM := "`n右: ↺ 表示縮小 / ↻ 表示拡大"
     static UNDO := "↺ 元に戻す / ↻ やり直し"
     if ( app = "" )
         app := KnobApp()
     text := "`n- - - - - - - - - - - - - - - -"
+    if showName
+        text .= "`n" KnobAppName()
     switch app {
         case "adobe":
             text .= "`n左: ↺ Shift+Tab / ↻ Tab"
@@ -101,16 +105,16 @@ KnobMenuText( app := "" ) {
             text .= "`n左: " UNDO ZOOM
         case "tab":
             text .= "`n左: ↺ 前のタブ / ↻ 次のタブ"
-                . "`n　└ 入力中: " UNDO ZOOM
+                . "`n└ 入力中: " UNDO ZOOM
         case "all":
             text .= "`n左: ↺ Shift+Tab / ↻ Tab"
-                . "`n　└ 入力中・メモ帳: " UNDO
-                . "`n　└ Chrome・エクスプローラー・VSCode: ↺ 前のタブ / ↻ 次のタブ"
-                . "`n　└ デスクトップ: 無効" ZOOM
-                . "`n　└ Adobe系: ↺ ↓ / ↻ ↑"
+                . "`n└ 入力中・メモ帳: " UNDO
+                . "`n└ Chrome・エクスプローラー・VSCode: ↺ 前のタブ / ↻ 次のタブ"
+                . "`n└ デスクトップ: 無効" ZOOM
+                . "`n└ Adobe系: ↺ ↓ / ↻ ↑"
         default:
             text .= "`n左: ↺ Shift+Tab / ↻ Tab"
-                . "`n　└ 入力中: " UNDO ZOOM
+                . "`n└ 入力中: " UNDO ZOOM
     }
     return text
 }
@@ -127,6 +131,23 @@ KnobApp() {
     if IsTabSwitchApp()
         return "tab"
     return "default"
+}
+
+; ノブ欄の見出しに出す、アクティブなウィンドウのアプリ名。
+; 表に無いアプリは実行ファイル名から「.exe」を除いたものを出す。
+KnobAppName() {
+    static names := Map("adobe premiere pro.exe", "Premiere Pro", "illustrator.exe", "Illustrator"
+        , "photoshop.exe", "Photoshop", "adobe audition.exe", "Audition", "afterfx.exe", "After Effects"
+        , "lightroom.exe", "Lightroom", "chrome.exe", "Chrome", "code.exe", "VSCode", "notepad.exe", "メモ帳")
+    if IsDesktop()
+        return "デスクトップ"
+    if WinActive( class_explorer )
+        return "エクスプローラー"
+    try {
+        exe := WinGetProcessName( "A" )
+        return names.Has( StrLower(exe) ) ? names[StrLower(exe)] : RegExReplace( exe, "i)\.exe$" )
+    }
+    return "このウィンドウ"
 }
 ; 元に戻す／やり直しを送る。メモ帳だけ ^+z が効かないため ^y にする。
 SendUndoRedo( key ) {
