@@ -37,7 +37,7 @@ ExplorerMenuText() {
     c: 開いているフォルダのパスを取得
     d: Downloadsの最新ファイルを移動
     v: コピーしたパスへ移動
-    x: 7-Zipで展開
+    z: 7-Zipで展開
     - - - - - - - - - - - - - - - -
     1: 動画フォルダの作成
     2: Original, Proxy
@@ -68,7 +68,7 @@ ExplorerMenuText() {
             case "c":      RunGetExplorerPath()
             case "d":      MoveFileHere()
             case "v":      NavigateToClipboardPath()
-            case "x":      ExtractWith7Zip()
+            case "z":      ExtractWith7Zip()
             case "1":      CreateFolders(["01_Master","02_Assets","03_Works","04_Projects","05_Render"])
             case "2":      CreateFolders(["Original","Proxy"])
             default:       MyTooltip("無効なキーです", 500)
@@ -353,7 +353,7 @@ OpenSelectedWith(item) {
     }
 }
 
-; 選択中の圧縮ファイルを 7-Zip で展開する（2ストロークの x）。
+; 選択中の圧縮ファイルを 7-Zip で展開する（2ストロークの z）。
 ; 中身がアーカイブと同名のフォルダ1つにまとまっていれば「ここに展開」、
 ; ファイルが直接入っていれば「<名前>\ に展開」にする（フォルダの二重化とばらまきを両方避ける）。
 ; 右クリックメニューはたどらず 7z.exe で中身を調べ、展開は 7zG.exe（進捗・上書き確認・パスワード入力の画面が出る）に任せる。
