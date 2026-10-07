@@ -6,8 +6,9 @@ AutoHotkey v2.0 による個人用キーボード・アプリケーション自�
 
 ```
 yuya_allways.ahk           # メインエントリポイント（全ファイルをinclude）
-startup_manager.ahk        # 外付けドライブ接続時のアプリ自動起動（会社用）
-startup_manager_home.ahk   # 同上（自宅用・TVClock追加）
+startup/
+  startup.ps1              # ログイン後、W:ドライブの準備を待ってからアプリを起動（会社・自宅共通）
+  register_task.ps1        # startup.ps1 をタスクスケジューラに登録する
 apps/
   Common.ahk               # グローバルホットキー・2ストロークコマンド・クリップボード監視
   Explorer.ahk             # エクスプローラー／ファイルダイアログ拡張
@@ -368,11 +369,20 @@ Adobe系でIMEがONのままツールキー（`V` など）を押すと、打鍵
 - `MyTooltip()` は `- - -` だけの行（メニューの区切り線）を、罫線素片（`─` U+2500）だけの線に置き換えて最も長い行の幅まで伸ばす（`StretchSeparators()`）。半角ハイフンは字間が空いて点線に見えたため罫線にした（2026-10-06。罫線は隣の字とつながり1本の線になることを画面で確認済み）。メニュー文字列の側は `- - -` のままにする（ショートカット一覧の `MenuTextRows()` が先頭の `-` で区切り線を落とすため）。ツールチップのフォントはプロポーショナルなので文字数では合わない。ツールチップと同じシステムフォント（`NONCLIENTMETRICS.lfStatusFont`）で `GetTextExtentPoint32W` を使って実際の幅（px）を測って比べる。折り返し（`WrapText()`）の**後**にかける。区切り線は文字数が多いので、先に伸ばすと区切り線自体が折れるため。コストは実測0.8ms/回
 - **Escで無変換を送る処理は廃止した**（2026-08-24）。Adobe系は「日本語入力のままツールキーを押したときの救済」が自動でIMEを切るため不要になったのが理由。ただし救済が効くのは**Adobe系の英字キーだけ**なので、他アプリでEscによるIME解除が要るなら `#HotIf !IsAdobeApp()` を付けて復活させる
 
-### startup_manager の動作
+### ログイン時のアプリ起動（startup/）
 
-- Wドライブの接続を監視（1秒間隔・最大120秒）
-- 接続検出後、3秒待ってから Eagle・carnac を1秒間隔で起動
-- 自宅版（startup_manager_home.ahk）は TVClock も追加起動
+タスクスケジューラのタスク `AhkStartup`（ログオン時）が、W:ドライブ（Googleドライブ）の準備を待ってから Eagle・TVClock・carnac を起動する。2026-10-07 に AHK の `startup_manager.ahk` / `startup_manager_home.ahk`（スタートアップフォルダから起動）を置き換えた。スタートアップフォルダの項目は W: が用意される前に実行されることがあり得るため。
+
+- タスクの中身は「`startup.ps1` が見えるまで1秒ごとに待つ（上限600秒、超えたら exit 1）→ UTF-8 として読んで実行」の短いコマンドだけ。本体はリポジトリに置き、版管理する。待つ対象をドライブではなくファイルにしているのは、ドライブが見えてもファイルの同期が済んでいないことがあるため
+- 本体を変えるだけならタスクの登録し直しは不要。タスクの設定を変えたら `powershell -NoProfile -ExecutionPolicy Bypass -File startupegister_task.ps1` で登録し直す（上書き）。PCを新しくしたときもこれを1回実行する
+- **Windows PowerShell 5.1 は BOM無しUTF-8 を Shift-JIS として読む**（PowerShell 7 は入っていない）。日本語のコメントでも行が壊れて構文エラーになる（実測）。そのため
+  - `startup.ps1` は `-File` で実行せず、`[IO.File]::ReadAllText(…, UTF8)` → `[ScriptBlock]::Create` で実行する。`$PSScriptRoot` が空になるのでパスは絶対パスで書く
+  - `register_task.ps1` は手で `-File` 実行するので**ASCIIだけで書く**（コメントも英語）。リポジトリのパスは `$PSScriptRoot` から組み立てる
+- コンソール窓を出さないため `conhost.exe --headless powershell.exe …` で起動する
+- 起動するアプリは `startup.ps1` 冒頭の `$apps` に書く。存在しないexeは飛ばすので会社・自宅で1本にしてある（TVClock は自宅PCにしか無い）。起動済みのものも飛ばす（プロセス名が exe 名と違う carnac の `Setup.exe` は `Process = 'Carnac'` を書く）
+- 起動したら（失敗したら）トースト通知を出す。記録は `%LOCALAPPDATA%\AhkStartup\startup.log`。リポジトリに置かないのは使用履歴を同期の対象にしたくないため（JSXランチャーのMRUと同じ）
+- 実測：タスクを手動実行して約4.8秒で完了（3秒の待ち＋判定）。起動はテスト用のタスクでメモ帳を起動して確認した
+- `yuya_allways.ahk` は今もスタートアップフォルダのショートカットから起動している
 
 ## コーディング規約
 
@@ -389,7 +399,7 @@ Adobe系でIMEがONのままツールキー（`V` など）を押すと、打鍵
 ## 実行方法
 
 `yuya_allways.ahk` を AutoHotkey v2 で実行する。
-`startup_manager.ahk` はシステム起動時に別プロセスで実行する。
+ログイン時のアプリ起動はタスクスケジューラの `AhkStartup` が `startup/startup.ps1` を実行する（上記「ログイン時のアプリ起動」）。
 
 ### 二重常駐への対策
 
