@@ -37,6 +37,7 @@ ExplorerMenuText() {
     c: 開いているフォルダのパスを取得
     d: Downloadsの最新ファイルを移動
     v: コピーしたパスへ移動
+    x: 7-Zipで展開
     - - - - - - - - - - - - - - - -
     1: 動画フォルダの作成
     2: Original, Proxy
@@ -67,6 +68,7 @@ ExplorerMenuText() {
             case "c":      RunGetExplorerPath()
             case "d":      MoveFileHere()
             case "v":      NavigateToClipboardPath()
+            case "x":      ExtractWith7Zip()
             case "1":      CreateFolders(["01_Master","02_Assets","03_Works","04_Projects","05_Render"])
             case "2":      CreateFolders(["Original","Proxy"])
             default:       MyTooltip("無効なキーです", 500)
@@ -349,6 +351,97 @@ OpenSelectedWith(item) {
     } catch as err {
         MyTooltip(item.label " を起動できませんでした`n" err.Message, 3000)
     }
+}
+
+; 選択中の圧縮ファイルを 7-Zip で展開する（2ストロークの x）。
+; 中身がアーカイブと同名のフォルダ1つにまとまっていれば「ここに展開」、
+; ファイルが直接入っていれば「<名前>\ に展開」にする（フォルダの二重化とばらまきを両方避ける）。
+; 右クリックメニューはたどらず 7z.exe で中身を調べ、展開は 7zG.exe（進捗・上書き確認・パスワード入力の画面が出る）に任せる。
+; macOS で作った zip に付く __MACOSX は判定から外し、展開もしない。
+ExtractWith7Zip() {
+    paths := GetSelectedPaths()
+    if (paths = "") {
+        MyTooltip("エクスプローラーのウィンドウで使ってください", 2000)
+        return
+    }
+    dir7z := Get7ZipDir()
+    if !FileExist(dir7z "7z.exe") {
+        MyTooltip("7-Zip が見つかりません", 2000)
+        return
+    }
+    msgs := []
+    skipped := []
+    for p in paths {
+        if DirExist(p)
+            continue
+        SplitPath(p, &fileName, &dir, , &nameNoExt)
+        mode := ArchiveExtractMode(dir7z "7z.exe", p, nameNoExt)
+        if (mode = "") {
+            skipped.Push(fileName)
+            continue
+        }
+        dest := (mode = "here") ? dir : dir "\" nameNoExt
+        ; -o の末尾に \ を付けない（"…\" の \ が閉じ引用符を打ち消すため）
+        try Run('"' dir7z '7zG.exe" x "' p '" -o"' dest '" -xr!__MACOSX')
+        catch as err {
+            MyTooltip("7-Zip を起動できませんでした`n" err.Message, 3000)
+            return
+        }
+        msgs.Push((mode = "here" ? "ここに展開: " : nameNoExt "\ に展開: ") fileName)
+    }
+    for f in skipped
+        msgs.Push("圧縮ファイルではありません: " f)
+    MyTooltip(msgs.Length ? JoinLines(msgs) : "圧縮ファイルを選択してください", 2000)
+}
+
+; 中身を調べて展開の仕方を返す。"here" = 同名フォルダにまとまっている / "folder" = それ以外 /
+; "" = 圧縮ファイルとして開けない。
+ArchiveExtractMode(exe7z, path, name) {
+    tmp := A_Temp "\ahk_7z_list.txt"
+    try FileDelete(tmp)
+    ; < nul はパスワードを聞かれたときに入力待ちで止まらないため。-sccUTF-8 で日本語の名前を化けさせない
+    code := RunWait(A_ComSpec ' /c ""' exe7z '" l -slt -ba -sccUTF-8 "' path '" < nul > "' tmp '" 2>nul"', , "Hide")
+    list := ""
+    try list := FileRead(tmp, "UTF-8")
+    try FileDelete(tmp)
+    if (code >= 2)
+        return ""
+    isFolder := false
+    entries := 0
+    last := ""
+    for line in StrSplit(list, "`n", "`r") {
+        if (SubStr(line, 1, 7) = "Path = ") {
+            last := SubStr(line, 8)
+            top := StrSplit(last, "\")[1]
+            if (top = "__MACOSX")
+                continue
+            entries++
+            if (top != name)                ; 同名フォルダの外に何かある
+                return "folder"
+            if InStr(last, "\")             ; フォルダ自体の項目が無い zip もあるので、下に物があることでも見る
+                isFolder := true
+        } else if (line = "Folder = +" && last = name) {
+            isFolder := true
+        }
+    }
+    return (entries && isFolder) ? "here" : (entries ? "folder" : "")
+}
+
+Get7ZipDir() {
+    for v in ["Path64", "Path"] {
+        try {
+            if (d := RegRead("HKLM\SOFTWARE\7-Zip", v))
+                return RTrim(d, "\") "\"
+        }
+    }
+    return A_ProgramFiles "\7-Zip\"
+}
+
+JoinLines(arr) {
+    s := ""
+    for v in arr
+        s .= (A_Index > 1 ? "`n" : "") v
+    return s
 }
 
 ;;
