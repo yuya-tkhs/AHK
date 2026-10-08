@@ -69,7 +69,7 @@ ExplorerMenuText() {
             case "d":      MoveFileHere()
             case "v":      NavigateToClipboardPath()
             case "z":      ExtractWith7Zip()
-            case "1":      CreateFolders(["01_Master","02_Assets","03_Works","04_Projects","05_Render","06_Document"])
+            case "1":      CreateFolders(["01_Master","02_Assets","03_Works","04_Projects","05_Render","Document"])
             case "2":      CreateFolders(["Original","Proxy"])
             default:       MyTooltip("無効なキーです", 500)
         }
