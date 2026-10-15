@@ -7,7 +7,7 @@ AutoHotkey v2.0 による個人用キーボード・アプリケーション自�
 ```
 yuya_allways.ahk           # メインエントリポイント（全ファイルをinclude）
 startup/
-  startup.ps1              # ログイン後、W:ドライブの準備を待ってからアプリを起動（会社・自宅共通）
+  startup.ps1              # ログイン後、W:ドライブの準備を待ってから AHK 本体とアプリを起動（会社・自宅共通）
   register_task.ps1        # startup.ps1 をタスクスケジューラに登録する
 apps/
   Common.ahk               # グローバルホットキー・2ストロークコマンド・クリップボード監視
@@ -389,18 +389,22 @@ Adobe系でIMEがONのままツールキー（`V` など）を押すと、打鍵
 
 ### ログイン時のアプリ起動（startup/）
 
-タスクスケジューラのタスク `AhkStartup`（ログオン時）が、W:ドライブ（Googleドライブ）の準備を待ってから Eagle・TVClock・carnac を起動する。2026-10-07 に AHK の `startup_manager.ahk` / `startup_manager_home.ahk`（スタートアップフォルダから起動）を置き換えた。スタートアップフォルダの項目は W: が用意される前に実行されることがあり得るため。
+タスクスケジューラのタスク `AhkStartup`（ログオン時）が、W:ドライブ（Googleドライブ）の準備を待ってから、`yuya_allways.ahk`・Eagle・TVClock・carnac をこの順に起動する。2026-10-07 に AHK の `startup_manager.ahk` / `startup_manager_home.ahk`（スタートアップフォルダから起動）を置き換えた。スタートアップフォルダの項目は W: が用意される前に実行されることがあり得るため。2026-10-15 に `yuya_allways.ahk` もスタートアップフォルダのショートカットからこちらへ移した。起動直後は Googleドライブが立ち上がっても応答しなくなることがあり、Explorer がスタートアップの項目を順に起動する中で W: 上の項目に引っかかると、後ろの項目まで巻き添えで遅れるおそれがあるため（推測。タスクなら待つのはこの ps だけ）。
 
 - タスクの中身は「`startup.ps1` が見えるまで1秒ごとに待つ（上限600秒、超えたら exit 1）→ UTF-8 として読んで実行」の短いコマンドだけ。本体はリポジトリに置き、版管理する。待つ対象をドライブではなくファイルにしているのは、ドライブが見えてもファイルの同期が済んでいないことがあるため
-- 本体を変えるだけならタスクの登録し直しは不要。タスクの設定を変えたら `powershell -NoProfile -ExecutionPolicy Bypass -File startupegister_task.ps1` で登録し直す（上書き）。PCを新しくしたときもこれを1回実行する
+- 本体を変えるだけならタスクの登録し直しは不要。タスクの設定を変えたら `powershell -NoProfile -ExecutionPolicy Bypass -File startup\register_task.ps1` で登録し直す（上書き）。**PCごとに1回実行が必要**（2026-10-15 時点で会社PCでは未登録のままで、Eagle・carnac が自動起動していなかった）
+- `register_task.ps1` は登録のあとスタートアップフォルダを片付ける。リポジトリ内のファイルを指すショートカット（`yuya_allways.ahk`、削除済みの `startup_manager.ahk` など）と、`$apps` と同じアプリを指すショートカットを消す（残すと二重に起動し、ログオン直後に Explorer が W: を触り続けるため）。アプリの判定に使う `$appSuffixes` は ASCII で書く必要があるのでパスの末尾だけを持つ。**`$apps` を増やしたらここも足す**
+- タスクの優先度は 4（Normal）にする。**タスクから起動したアプリは優先度を引き継ぎ**、既定の 7 は CPU が BelowNormal・I/O も低優先度になるため。4 にしてから carnac が Normal で起動することを実測で確認した。AHK は最初のツールチップを出すときに自分で `High` に上げる（`ToolTipEx()`）
+- W: を待つ上限を超えたときは、`exit 1` の前にログへ `W: wait timed out` と書く（AHK も起動しないので、後から原因を追えるように）
 - **Windows PowerShell 5.1 は BOM無しUTF-8 を Shift-JIS として読む**（PowerShell 7 は入っていない）。日本語のコメントでも行が壊れて構文エラーになる（実測）。そのため
   - `startup.ps1` は `-File` で実行せず、`[IO.File]::ReadAllText(…, UTF8)` → `[ScriptBlock]::Create` で実行する。`$PSScriptRoot` が空になるのでパスは絶対パスで書く
   - `register_task.ps1` は手で `-File` 実行するので**ASCIIだけで書く**（コメントも英語）。リポジトリのパスは `$PSScriptRoot` から組み立てる
 - コンソール窓を出さないため `conhost.exe --headless powershell.exe …` で起動する
-- 起動するアプリは `startup.ps1` 冒頭の `$apps` に書く。存在しないexeは飛ばすので会社・自宅で1本にしてある（TVClock は自宅PCにしか無い）。起動済みのものも飛ばす（プロセス名が exe 名と違う carnac の `Setup.exe` は `Process = 'Carnac'` を書く）
+- 起動するアプリは `startup.ps1` 冒頭の `$apps` に書く。存在しないexeは飛ばすので会社・自宅で1本にしてある（TVClock は自宅PCにしか無い）。起動済みのものも飛ばす（プロセス名が exe 名と違う carnac の `Setup.exe` は `Process = 'Carnac'` を書く）。AHK は他のスクリプトも同じ `AutoHotkey64.exe` で動くので、`Match = 'yuya_allways.ahk'` でコマンドラインを見て判定する
+- AHK は `.ahk` の関連付け（AutoHotkeyUX のランチャー）を経由せず `AutoHotkey64.exe` を直接起動する。場所は `HKLM\SOFTWARE\AutoHotkey` の `InstallDir` から引く
 - 起動したら（失敗したら）トースト通知を出す。記録は `%LOCALAPPDATA%\AhkStartup\startup.log`。リポジトリに置かないのは使用履歴を同期の対象にしたくないため（JSXランチャーのMRUと同じ）
 - 実測：タスクを手動実行して約4.8秒で完了（3秒の待ち＋判定）。起動はテスト用のタスクでメモ帳を起動して確認した
-- `yuya_allways.ahk` は今もスタートアップフォルダのショートカットから起動している
+- 実測（2026-10-15、会社PC）：AHK を止めてタスクを手動実行すると `AutoHotkey64.exe "…\yuya_allways.ahk"` が1つだけ起動し、起動済みの Eagle・carnac は飛ばされた。起動済みの AHK も飛ばされる。タスクが終わった後もアプリは動き続ける
 
 ## コーディング規約
 
@@ -417,7 +421,7 @@ Adobe系でIMEがONのままツールキー（`V` など）を押すと、打鍵
 ## 実行方法
 
 `yuya_allways.ahk` を AutoHotkey v2 で実行する。
-ログイン時のアプリ起動はタスクスケジューラの `AhkStartup` が `startup/startup.ps1` を実行する（上記「ログイン時のアプリ起動」）。
+ログイン時は、タスクスケジューラの `AhkStartup` が `startup/startup.ps1` を実行し、`yuya_allways.ahk` も起動する（上記「ログイン時のアプリ起動」）。スタートアップフォルダには置かない。
 
 ### 二重常駐への対策
 

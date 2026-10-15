@@ -3,9 +3,19 @@
 # UTF-8 として読み込んで実行する（Windows PowerShell 5.1 は BOM無しUTF-8 を Shift-JIS として読むため）。
 # そのため $PSScriptRoot は空になる。パスはすべて絶対パスで書く。
 
-# 起動するアプリ。無いものは飛ばす（TVClock は自宅PCにしか無い）
+# AutoHotkey本体。関連付け（AutoHotkeyUX のランチャー）を経由せず直接起動する
+$ahkDir = (Get-ItemProperty 'HKLM:\SOFTWARE\AutoHotkey' -ErrorAction SilentlyContinue).InstallDir
+if (-not $ahkDir) { $ahkDir = 'C:\Program Files\AutoHotkey' }
+
+# 起動するアプリ。上から順に起動し、無いものは飛ばす（TVClock は自宅PCにしか無い）
+# Args    … 起動時の引数
 # Process … 起動済みか調べるプロセス名。exe名と違うときだけ書く
+# Match   … 起動済みかをコマンドラインで調べるときの文字列。同じexeで別物が動くもの（AHK）に使う
 $apps = @(
+    # ホットキーは体感に直結するので最初に起動する
+    @{ Path = Join-Path $ahkDir 'v2\AutoHotkey64.exe'
+       Args = '"W:\マイドライブ\Programming\AHK\yuya_allways.ahk"'
+       Match = 'yuya_allways.ahk' }
     @{ Path = 'C:\Program Files\Eagle\Eagle.exe' }
     @{ Path = "$env:LOCALAPPDATA\Team Hasebe\TVClock\TVClock.exe" }
     @{ Path = 'W:\マイドライブ\Programming\carnac\Setup.exe'; Process = 'Carnac' }
@@ -46,12 +56,21 @@ foreach ($app in $apps) {
     $path = $app.Path
     if (-not (Test-Path -LiteralPath $path)) { continue }
     $name = if ($app.Process) { $app.Process } else { [IO.Path]::GetFileNameWithoutExtension($path) }
-    if (Get-Process -Name $name -ErrorAction SilentlyContinue) {
+    $running = if ($app.Match) {
+        $exe = [IO.Path]::GetFileName($path)
+        Get-CimInstance Win32_Process -Filter "Name = '$exe'" | Where-Object { $_.CommandLine -like "*$($app.Match)*" }
+    } else {
+        Get-Process -Name $name -ErrorAction SilentlyContinue
+    }
+    if ($app.Match) { $name = $app.Match }
+    if ($running) {
         Write-Log "起動済みのため飛ばす: $name"
         continue
     }
     try {
-        Start-Process -FilePath $path -WorkingDirectory (Split-Path $path)
+        $startArgs = @{ FilePath = $path; WorkingDirectory = (Split-Path $path) }
+        if ($app.Args) { $startArgs.ArgumentList = $app.Args }
+        Start-Process @startArgs
         $started += $name
         Write-Log "起動: $path"
         Start-Sleep -Seconds $intervalSeconds
