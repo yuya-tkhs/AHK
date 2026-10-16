@@ -389,7 +389,7 @@ Adobe系でIMEがONのままツールキー（`V` など）を押すと、打鍵
 
 ### ログイン時のアプリ起動（startup/）
 
-タスクスケジューラのタスク `AhkStartup`（ログオン時）が、W:ドライブ（Googleドライブ）の準備を待ってから、`yuya_allways.ahk`・Eagle・TVClock・carnac をこの順に起動する。2026-10-07 に AHK の `startup_manager.ahk` / `startup_manager_home.ahk`（スタートアップフォルダから起動）を置き換えた。スタートアップフォルダの項目は W: が用意される前に実行されることがあり得るため。2026-10-15 に `yuya_allways.ahk` もスタートアップフォルダのショートカットからこちらへ移した。起動直後は Googleドライブが立ち上がっても応答しなくなることがあり、Explorer がスタートアップの項目を順に起動する中で W: 上の項目に引っかかると、後ろの項目まで巻き添えで遅れるおそれがあるため（推測。タスクなら待つのはこの ps だけ）。
+タスクスケジューラのタスク `AhkStartup`（ログオン時）が、W:ドライブ（Googleドライブ）の準備を待ってから、`yuya_allways.ahk`・Eagle・TVClock・carnac・Chrome・Orca・VSCode・Notion・エクスプローラーをこの順に起動する（Chrome 以降は 2026-10-16 に追加）。2026-10-07 に AHK の `startup_manager.ahk` / `startup_manager_home.ahk`（スタートアップフォルダから起動）を置き換えた。スタートアップフォルダの項目は W: が用意される前に実行されることがあり得るため。2026-10-15 に `yuya_allways.ahk` もスタートアップフォルダのショートカットからこちらへ移した。起動直後は Googleドライブが立ち上がっても応答しなくなることがあり、Explorer がスタートアップの項目を順に起動する中で W: 上の項目に引っかかると、後ろの項目まで巻き添えで遅れるおそれがあるため（推測。タスクなら待つのはこの ps だけ）。
 
 - タスクの中身は「`startup.ps1` が見えるまで1秒ごとに待つ（上限600秒、超えたら exit 1）→ UTF-8 として読んで実行」の短いコマンドだけ。本体はリポジトリに置き、版管理する。待つ対象をドライブではなくファイルにしているのは、ドライブが見えてもファイルの同期が済んでいないことがあるため
 - 本体を変えるだけならタスクの登録し直しは不要。タスクの設定を変えたら `powershell -NoProfile -ExecutionPolicy Bypass -File startup\register_task.ps1` で登録し直す（上書き）。**PCごとに1回実行が必要**（2026-10-15 時点で会社PCでは未登録のままで、Eagle・carnac が自動起動していなかった）
@@ -402,9 +402,17 @@ Adobe系でIMEがONのままツールキー（`V` など）を押すと、打鍵
 - コンソール窓を出さないため `conhost.exe --headless powershell.exe …` で起動する
 - 起動するアプリは `startup.ps1` 冒頭の `$apps` に書く。存在しないexeは飛ばすので会社・自宅で1本にしてある（TVClock は自宅PCにしか無い）。起動済みのものも飛ばす（プロセス名が exe 名と違う carnac の `Setup.exe` は `Process = 'Carnac'` を書く）。AHK は他のスクリプトも同じ `AutoHotkey64.exe` で動くので、`Match = 'yuya_allways.ahk'` でコマンドラインを見て判定する
 - AHK は `.ahk` の関連付け（AutoHotkeyUX のランチャー）を経由せず `AutoHotkey64.exe` を直接起動する。場所は `HKLM\SOFTWARE\AutoHotkey` の `InstallDir` から引く
+- `Path` は配列にでき、最初に見つかったものを使う（VSCode はユーザー単位とマシン単位でインストール先が違うため）
+- プロセスの有無では判断できないものは `Check`（スクリプトブロック。結果が空なら未起動）で調べる。Chrome は窓を閉じても裏でプロセスが残ることがあるので `MainWindowHandle` のある chrome で、エクスプローラーは `explorer.exe` がシェルとして常に動いているので `Shell.Application` の `Windows()` にエクスプローラーの窓があるかで見る
+- Orca は `--disable-gpu-compositing` を付けて起動する（デスクトップ・スタートメニューのショートカットと同じ）。Notion のショートカットには引数が無かったので素で起動する。Notion は自前の自動起動（`HKCU\...\Run` の `--open-at-login`）もあり、先に起動していれば飛ばされる
+- **アプリは `Start-Process` ではなく WMI（`Win32_Process.Create`）で起動する**（`Start-Detached`）。Electron 製のアプリ（Eagle・VSCode など）は起動時に親プロセスのコンソールへ自分からつなぐ（`AttachConsole`）ため、`Start-Process` だとタスクの見えないコンソール（`conhost --headless`）につながったままになり、ps が終わっても conhost が残ってタスクが「実行中」のままになる（実測：ログオン時に Eagle を起動した回と、手動で VSCode を起動した回がそうなった）。その間はタスクを手動で実行しても無視される（`MultipleInstances IgnoreNew`）
+  - `DETACHED_PROCESS` を付けた `CreateProcess` でも、親のコンソールにはつなげてしまうので効かない（実測）。WMI だと親が `WmiPrvSE.exe`（コンソールなし）になる。`AttachConsole` する GUI の子で比べ、`Start-Process`・DETACHED は conhost が残り、WMI だけ約2.9秒で終わった
+  - WMI から起動したプロセスの環境変数はユーザーの通常のもの（PATH・プロファイル関係もそろう。欠けるのは起動元のターミナル固有の変数だけ）で、優先度も Normal（実測）
+  - 残った conhost を停止しても、つながっていた VSCode の拡張（`claude.exe`・`copilot-runtime.exe` など）は生き残った（実測）
 - 起動したら（失敗したら）トースト通知を出す。記録は `%LOCALAPPDATA%\AhkStartup\startup.log`。リポジトリに置かないのは使用履歴を同期の対象にしたくないため（JSXランチャーのMRUと同じ）
 - 実測：タスクを手動実行して約4.8秒で完了（3秒の待ち＋判定）。起動はテスト用のタスクでメモ帳を起動して確認した
 - 実測（2026-10-15、会社PC）：AHK を止めてタスクを手動実行すると `AutoHotkey64.exe "…\yuya_allways.ahk"` が1つだけ起動し、起動済みの Eagle・carnac は飛ばされた。起動済みの AHK も飛ばされる。タスクが終わった後もアプリは動き続ける
+- 実測（2026-10-16、会社PC）：再起動してログオンしたときに AHK・Eagle・carnac が起動した（ただし上記のコンソールの件でタスクは終わらなかった）。WMI 方式にしてからは、AHK を止めて手動実行すると約6秒で完了し、AHK は `WmiPrvSE.exe` を親に Normal で起動した。新しく足したアプリは、起動済みなら飛ばすことと VSCode が起動することを確認した
 
 ## コーディング規約
 

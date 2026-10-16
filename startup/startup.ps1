@@ -8,9 +8,11 @@ $ahkDir = (Get-ItemProperty 'HKLM:\SOFTWARE\AutoHotkey' -ErrorAction SilentlyCon
 if (-not $ahkDir) { $ahkDir = 'C:\Program Files\AutoHotkey' }
 
 # 起動するアプリ。上から順に起動し、無いものは飛ばす（TVClock は自宅PCにしか無い）
+# Path    … 実行ファイル。配列なら最初に見つかったものを使う（PCによってインストール先が違うもの）
 # Args    … 起動時の引数
 # Process … 起動済みか調べるプロセス名。exe名と違うときだけ書く
 # Match   … 起動済みかをコマンドラインで調べるときの文字列。同じexeで別物が動くもの（AHK）に使う
+# Check   … 起動済みかを自前で調べる処理（結果が空なら未起動）。プロセスの有無では分からないものに使う
 $apps = @(
     # ホットキーは体感に直結するので最初に起動する
     @{ Path = Join-Path $ahkDir 'v2\AutoHotkey64.exe'
@@ -19,6 +21,17 @@ $apps = @(
     @{ Path = 'C:\Program Files\Eagle\Eagle.exe' }
     @{ Path = "$env:LOCALAPPDATA\Team Hasebe\TVClock\TVClock.exe" }
     @{ Path = 'W:\マイドライブ\Programming\carnac\Setup.exe'; Process = 'Carnac' }
+    # Chrome は窓を閉じても裏でプロセスが残ることがあるので、窓があるかで見る
+    @{ Path = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+       Check = { Get-Process chrome -ErrorAction SilentlyContinue | Where-Object MainWindowHandle -ne 0 } }
+    # GPU合成を切って起動する（デスクトップ・スタートメニューのショートカットと同じ引数）
+    @{ Path = "$env:LOCALAPPDATA\Programs\orca\Orca.exe"; Args = '--disable-gpu-compositing' }
+    @{ Path = @("$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe", 'C:\Program Files\Microsoft VS Code\Code.exe') }
+    # Notion は自前の自動起動（HKCU\...\Run）もある。先に起動していれば飛ばされる
+    @{ Path = "$env:LOCALAPPDATA\Programs\Notion\Notion.exe" }
+    # explorer.exe はシェルとして常に動いているので、エクスプローラーの窓があるかで見る
+    @{ Path = "$env:WINDIR\explorer.exe"; Process = 'エクスプローラー'
+       Check = { @((New-Object -ComObject Shell.Application).Windows()) | Where-Object { $_.FullName -like '*\explorer.exe' } } }
 )
 
 # ドライブが見えた直後は不安定なことがあるので少し待つ
@@ -48,15 +61,30 @@ function Show-Toast([string]$title, [string]$body) {
     }
 }
 
+# アプリはコンソールを持たない親（WMI の WmiPrvSE.exe）から起動する。
+# Electron 製のアプリ（Eagle・VSCode・Notion・Orca）は起動時に親プロセスのコンソールへ自分からつなぐ（AttachConsole）。
+# Start-Process で起動すると、タスクの見えないコンソール（conhost --headless）につながったままになり、ps が終わっても
+# conhost が残ってタスクが「実行中」のままになり、その間はタスクを手動で実行しても無視される（MultipleInstances IgnoreNew）。
+# 15分の上限で conhost が落とされても、つながっていたプロセス（VSCode の拡張など）は生き残った（実測）。
+# DETACHED_PROCESS でも親のコンソールにはつなげてしまうので効かない（実測）。WMI から起動したプロセスの環境変数はユーザーの通常のもの（PATH 含む）で、優先度も Normal
+function Start-Detached([string]$path, [string]$arguments) {
+    $cmd = '"' + $path + '"' + $(if ($arguments) { ' ' + $arguments })
+    $r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create `
+        -Arguments @{ CommandLine = $cmd; CurrentDirectory = (Split-Path $path) }
+    if ($r.ReturnValue -ne 0) { throw "Win32_Process.Create の戻り値 $($r.ReturnValue)" }
+}
+
 Start-Sleep -Seconds $settleSeconds
 
 $started = @()
 $failed = @()
 foreach ($app in $apps) {
-    $path = $app.Path
-    if (-not (Test-Path -LiteralPath $path)) { continue }
+    $path = @($app.Path) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+    if (-not $path) { continue }
     $name = if ($app.Process) { $app.Process } else { [IO.Path]::GetFileNameWithoutExtension($path) }
-    $running = if ($app.Match) {
+    $running = if ($app.Check) {
+        & $app.Check
+    } elseif ($app.Match) {
         $exe = [IO.Path]::GetFileName($path)
         Get-CimInstance Win32_Process -Filter "Name = '$exe'" | Where-Object { $_.CommandLine -like "*$($app.Match)*" }
     } else {
@@ -68,9 +96,7 @@ foreach ($app in $apps) {
         continue
     }
     try {
-        $startArgs = @{ FilePath = $path; WorkingDirectory = (Split-Path $path) }
-        if ($app.Args) { $startArgs.ArgumentList = $app.Args }
-        Start-Process @startArgs
+        Start-Detached $path $app.Args
         $started += $name
         Write-Log "起動: $path"
         Start-Sleep -Seconds $intervalSeconds

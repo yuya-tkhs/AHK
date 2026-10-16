@@ -38,7 +38,7 @@ Write-Host "Registered task '$taskName' -> $script"
 # from this repo, e.g. the old startup_manager.ahk). Leaving them would start the app twice, and
 # Explorer would still touch W: right after logon.
 # Keep $appSuffixes in sync with $apps in startup.ps1 (ASCII parts of the paths only).
-$appSuffixes = @('\Eagle.exe', '\TVClock.exe', '\carnac\Setup.exe')
+$appSuffixes = @('\Eagle.exe', '\TVClock.exe', '\carnac\Setup.exe', '\chrome.exe', '\Orca.exe', '\Code.exe', '\Notion.exe')
 $startup = [Environment]::GetFolderPath('Startup')
 $shell = New-Object -ComObject WScript.Shell
 Get-ChildItem -LiteralPath $startup -Filter *.lnk | ForEach-Object {
