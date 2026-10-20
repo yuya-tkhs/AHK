@@ -4,6 +4,7 @@
 ;   "run:NAME"      … パネルで指定したルートフォルダ配下を名前で実行。
 ;                     NAME は「ファイル名.jsx」「サブフォルダ/ファイル名.jsx」どちらも可。
 ;                     .jsx省略可・大小無視。
+;   "runfile:PATH"  … フルパスで実行（apps/PremiereRename.ahk が値を渡すときに使う）。
 ; 前提: Premiere側で JsxLauncher パネルを開いたままにしておくこと(閉じていると拾われない)。
 global gJsxCmd := A_AppData . "\Adobe\CEP\extensions\JsxLauncher\jsxl_cmd.txt"
 
@@ -95,7 +96,7 @@ PremiereMenuText() {
             case "t":      Send("+^!t")  ; Premiere側に割り当てたオーディオユニット時間の切り替え
             ; メニュー名は部分一致でよい（実際は「グラフィックとタイトル(&G)」）
             case "c":      MenuSelect(exe_pr, , "グラフィックとタイトル", "キャプションをグラフィックにアップグレード")
-            case "2":      JsxRun("リネーム.jsx")
+            case "2":      PrRenameStart()       ; トラック名は AHK のダイアログで（apps/PremiereRename.ahk）
             case "a":      JsxRun("位置アンカー変更.jsx")
             default:       MyTooltip("無効なキーです", 500)
         }

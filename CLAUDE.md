@@ -16,6 +16,7 @@ apps/
   Premiere.ahk             # Adobe Premiere Pro ホットキー
   Illustrator.ahk          # Illustrator ホットキー・3ストローク・JSX連携
   IllustratorLauncher.ahk  # JSXを一覧から選んで実行するランチャー
+  PremiereRename.ahk       # Premiere のトラック名変更を AHK のダイアログで（jsx に値を渡す）
   AdobeCommon.ahk          # Adobe共通の Ctrl+Enter 後処理をアプリ別に振り分け
 lib/
   Functions.ahk            # 共通関数（MyTooltip, WrapText, 2/3ストロークメニュー, IsUrl, CleanUrl）
@@ -244,6 +245,18 @@ Illustrator の2ストロークから `Space` で開く。文字入力で絞り�
 - 変換中かどうかは `IsImeComposing()`（lib/AppKeys.ahk）が IMM32 の `ImmGetCompositionStringW`（`GCS_COMPSTR`）で未確定文字列の長さを見て判定する。**`IsImeOn()` では代用できない**（IMEがONでも確定済みなら実行してよいため）。ATOKはTSF製のIMEだがIMM互換レイヤ経由で取れる。実測（ATOK 36 ＋ AHKのGui Edit）：未入力0 / 「あいうえお」入力中10 / 候補ウィンドウ表示中10 / `Escape` 後0。**別のIMEに変えたら実測し直すこと**
 - 実測での通し確認：「あいうえお」入力中の `Enter` は確定だけで実行は起きず、確定後の `Enter` で実行される
 - 最近使ったものを先頭に出す（MRU・上限20件）。保存先は `%APPDATA%\AhkJsxLauncher\mru.txt`。リポジトリにもGoogleドライブにも置かないのは、使用履歴を版管理・同期の対象にしたくないため。並べ替えは絞り込みの**前**にかけるので、検索したときも最近使ったものが上に来る
+
+### Premiere のトラック名変更ダイアログ（apps/PremiereRename.ahk）
+
+Premiere の2ストローク（`Ctrl + Space`）→ `2`。Premiere（NewWorld）では ScriptUI のダイアログが使えないので、入力は AHK の Gui で受け、値を jsx に渡す（2026-10-20）。jsx は adobe-scripts リポジトリの `premiere/ExtendScript/リネーム.jsx`。仕組みの全体は adobe-scripts の CLAUDE.md「AHK のダイアログから値を渡す」。
+
+- 流れ：`args.op="list"` で今のトラック名を読む（往復 約0.1秒の実測）→ Gui で編集 → `args.op="apply"` で適用。クリップを選択していれば jsx が今までどおりの prompt でクリップ名を聞いて終わり、Gui は出ない
+- 値の渡し方：`%TEMP%\jsxl\<id>.call.jsx`（純 ASCII。非 ASCII は `\uXXXX`）に `$.global.__jsxlReq = {…}; $.evalFile(<adobe-scripts>\premiere\claude\jsxl_wrap.jsx)` を書き、JsxLauncher に `runfile:` で流す。結果は `<id>.result.json`。**adobe-scripts のパスは `gPrScriptsDir` に絶対パスで持つ**（両端末で同じ前提。自宅端末は未確認）
+- 結果ファイルは JSON パーサ無しで正規表現で読む（`JsxlGetStr` ほか）。jsx 側の結果のキーに `rn` を付けて、包みの `before` / `after` の `name` `video` などと取り違えないようにしている
+- 開始の期限は 3 秒。過ぎても始まらなければ取り下げてツールチップを出す（Premiere がダイアログ表示中・パネルが閉じているなど）。期限を過ぎてから始まった分は包みが本体を実行しない
+- 適用は、読んだときのシーケンス・本数・名前と今が違えば変えない（Gui を開いている間の手作業を上書きしない）。何も変えずに確定したら流さない。トラックが30本を超えるときは今までのテキストファイル方式（`run:リネーム.jsx`）に任せる
+- 確定は `Ctrl+Enter` / `Enter` / `NumpadEnter`、取消は `Escape`。`HotIf PrRenameGuiActive` で Gui 表示中だけ有効。Common.ahk の条件なしの `^Enter` より優先される（条件なしの変種は最低優先）。**変換中の `Enter` は IME に返す**（JSXランチャーと同じ）。`Ctrl+Enter` は変換中なら先に確定させてから読む
+- Claude Code の `ppro_run.ps1` と同じ `%TEMP%\jsxl` を使うが、ps1 の lock は取らない（人の操作を止めない）
 
 ### ショートカット一覧（apps/ShortcutList.ahk）
 
