@@ -403,8 +403,8 @@ Adobe系でIMEがONのままツールキー（`V` など）を押すと、打鍵
 - 起動するアプリは `startup.ps1` 冒頭の `$apps` に書く。存在しないexeは飛ばすので会社・自宅で1本にしてある（TVClock は自宅PCにしか無い）。起動済みのものも飛ばす（プロセス名が exe 名と違う carnac の `Setup.exe` は `Process = 'Carnac'` を書く）。AHK は他のスクリプトも同じ `AutoHotkey64.exe` で動くので、`Match = 'yuya_allways.ahk'` でコマンドラインを見て判定する
 - AHK は `.ahk` の関連付け（AutoHotkeyUX のランチャー）を経由せず `AutoHotkey64.exe` を直接起動する。場所は `HKLM\SOFTWARE\AutoHotkey` の `InstallDir` から引く
 - `Path` は配列にでき、最初に見つかったものを使う（VSCode はユーザー単位とマシン単位でインストール先が違うため）
-- プロセスの有無では判断できないものは `Check`（スクリプトブロック。結果が空なら未起動）で調べる。Chrome は窓を閉じても裏でプロセスが残ることがあるので `MainWindowHandle` のある chrome で、エクスプローラーは `explorer.exe` がシェルとして常に動いているので `Shell.Application` の `Windows()` にエクスプローラーの窓があるかで見る
-- Orca は `--disable-gpu-compositing` を付けて起動する（デスクトップ・スタートメニューのショートカットと同じ）。Notion のショートカットには引数が無かったので素で起動する。Notion は自前の自動起動（`HKCU\...\Run` の `--open-at-login`）もあり、先に起動していれば飛ばされる
+- プロセスの有無では判断できないものは `Check`（スクリプトブロック。結果が空なら未起動）で調べる。Chrome は窓を閉じても裏でプロセスが残ることがあるので `MainWindowHandle` のある chrome で（Notion も同じ）、エクスプローラーは `explorer.exe` がシェルとして常に動いているので `Shell.Application` の `Windows()` にエクスプローラーの窓があるかで見る
+- Orca は `--disable-gpu-compositing` を付けて起動する（デスクトップ・スタートメニューのショートカットと同じ）。Notion のショートカットには引数が無かったので素で起動する。Notion は自前の自動起動（`HKCU\...\Run` の `--open-at-login`）もあり、そちらは**窓を出さずに常駐だけする**。プロセスの有無で判定していたら飛ばしてしまい、ログオン後に Notion の窓が出なかった（2026-10-20）。そのため Chrome と同じく窓があるかで見る。常駐中の `Notion.exe` をもう一度起動すると、同じプロセスのまま窓が出る（実測：窓を隠して判定が空になること、再起動で窓が出ることを確認）
 - **アプリは `Start-Process` ではなく WMI（`Win32_Process.Create`）で起動する**（`Start-Detached`）。Electron 製のアプリ（Eagle・VSCode など）は起動時に親プロセスのコンソールへ自分からつなぐ（`AttachConsole`）ため、`Start-Process` だとタスクの見えないコンソール（`conhost --headless`）につながったままになり、ps が終わっても conhost が残ってタスクが「実行中」のままになる（実測：ログオン時に Eagle を起動した回と、手動で VSCode を起動した回がそうなった）。その間はタスクを手動で実行しても無視される（`MultipleInstances IgnoreNew`）
   - `DETACHED_PROCESS` を付けた `CreateProcess` でも、親のコンソールにはつなげてしまうので効かない（実測）。WMI だと親が `WmiPrvSE.exe`（コンソールなし）になる。`AttachConsole` する GUI の子で比べ、`Start-Process`・DETACHED は conhost が残り、WMI だけ約2.9秒で終わった
   - WMI から起動したプロセスの環境変数はユーザーの通常のもの（PATH・プロファイル関係もそろう。欠けるのは起動元のターミナル固有の変数だけ）で、優先度も Normal（実測）

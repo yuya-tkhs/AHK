@@ -27,8 +27,10 @@ $apps = @(
     # GPU合成を切って起動する（デスクトップ・スタートメニューのショートカットと同じ引数）
     @{ Path = "$env:LOCALAPPDATA\Programs\orca\Orca.exe"; Args = '--disable-gpu-compositing' }
     @{ Path = @("$env:LOCALAPPDATA\Programs\Microsoft VS Code\Code.exe", 'C:\Program Files\Microsoft VS Code\Code.exe') }
-    # Notion は自前の自動起動（HKCU\...\Run）もある。先に起動していれば飛ばされる
-    @{ Path = "$env:LOCALAPPDATA\Programs\Notion\Notion.exe" }
+    # Notion は自前の自動起動（HKCU\...\Run の --open-at-login）もあり、そちらは窓を出さずに常駐だけする。
+    # プロセスの有無で見ると飛ばしてしまうので、窓があるかで見る。常駐中の Notion.exe をもう一度起動すると窓が出る
+    @{ Path = "$env:LOCALAPPDATA\Programs\Notion\Notion.exe"
+       Check = { Get-Process Notion -ErrorAction SilentlyContinue | Where-Object MainWindowHandle -ne 0 } }
     # explorer.exe はシェルとして常に動いているので、エクスプローラーの窓があるかで見る
     @{ Path = "$env:WINDIR\explorer.exe"; Process = 'エクスプローラー'
        Check = { @((New-Object -ComObject Shell.Application).Windows()) | Where-Object { $_.FullName -like '*\explorer.exe' } } }
