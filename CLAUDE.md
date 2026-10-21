@@ -257,6 +257,8 @@ Premiere の2ストローク（`Ctrl + Space`）→ `2`。Premiere（NewWorld）
 - 適用は、読んだときのシーケンス・本数・名前と今が違えば変えない（Gui を開いている間の手作業を上書きしない）。何も変えずに確定したら流さない。トラックが30本を超えるときは今までのテキストファイル方式（`run:リネーム.jsx`）に任せる
 - 確定は `Ctrl+Enter` / `Enter` / `NumpadEnter`、取消は `Escape`。`HotIf PrRenameGuiActive` で Gui 表示中だけ有効。Common.ahk の条件なしの `^Enter` より優先される（条件なしの変種は最低優先）。**変換中の `Enter` は IME に返す**（JSXランチャーと同じ）。`Ctrl+Enter` は変換中なら先に確定させてから読む
 - Claude Code の `ppro_run.ps1` と同じ `%TEMP%\jsxl` を使うが、ps1 の lock は取らない（人の操作を止めない）
+- 実機の確認（2026-10-21、Premiere 26.3.2）：約 0.5 秒でダイアログ／`Ctrl+Enter`・`Enter` で確定（日本語の名前も可）／開き直すと今の名前／
+  `Esc` で変化なし／開いている間にシーケンスを切り替えると変えない。IME の変換中の確定は未確認（Claude からは試せない）
 
 ### ショートカット一覧（apps/ShortcutList.ahk）
 
