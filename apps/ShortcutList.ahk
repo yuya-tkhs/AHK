@@ -190,8 +190,7 @@ AppShortcutSections(app) {
             return [{ title: "Illustrator 2/3ストローク（Ctrl + Space 短押し）", rows: AiShortcutRows() }
                   , { title: "Illustrator 単独", rows: AiSoloShortcutRows() }]
         case "explorer":
-            return [{ title: "エクスプローラー 2/3ストローク（Ctrl + Space）", rows: GroupShortcutRows(MenuTextRows(ExplorerMenuText()), ExplorerMenu) }
-                  , { title: "エクスプローラー 単独", rows: [["BS", "削除（一覧にフォーカス時）"]] }]
+            return [{ title: "エクスプローラー 2/3ストローク（Ctrl + Space）", rows: GroupShortcutRows(MenuTextRows(ExplorerMenuText()), ExplorerMenu) }]
     }
     return []
 }

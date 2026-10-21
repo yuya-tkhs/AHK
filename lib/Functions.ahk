@@ -258,8 +258,7 @@ ReadMenuKey(menuText, allowBack := false, group := "", timeoutSec := 10) {
     ; "S"（Suppress）が要る。InputHook は文字キーを抑制するが、矢印のような
     ; 非文字キーは既定（VisibleNonText）で素通しするため、EndKeyに指定しただけでは
     ; アプリにも届く。Illustratorではオブジェクトが動き、Backspace は選択中の
-    ; オブジェクトを削除する。エクスプローラーの BS（→ Del）ホットキーより
-    ; InputHook が先に捕捉することは実測確認済み（ファイルは消えない）。
+    ; オブジェクトを削除する（エクスプローラーでは「戻る」になる）。
     ih.KeyOpt(BuildMenuEndKeys(group, allowBack), "SE")
     ih.Start()
     MyTooltip(menuText, timeoutSec * 1000)
